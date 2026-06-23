@@ -70,6 +70,35 @@ Design rules, each with a reason:
 - **Keep aggregates small.** Large aggregates load and lock more data and create contention. Include only what must change together to satisfy an invariant.
 - **One aggregate per transaction.** A single transaction should create or modify one aggregate. Needing to change several at once usually means a boundary is wrong, or that you should use eventual consistency.
 - **Reference other aggregates by identity, not by object.** An `Order` holds a `CustomerId`, not a `Customer` instance. This keeps boundaries crisp, transactions small, and aggregates independently loadable.
+- **Update other aggregates with eventual consistency.** When changing one aggregate must affect another, do it by publishing a domain event and updating the second aggregate in a separate transaction — not both at once.
+
+### Designing aggregate boundaries
+
+The hard part is choosing the boundary, and the rule is: **let the invariants drive it.** An aggregate should be exactly large enough to enforce, within a single transaction, the rules that must always hold together — and no larger. Two forces pull against each other:
+
+- **Bigger boundaries** make more invariants enforceable in one transaction, but raise memory cost and **concurrency conflicts** — more callers compete to change the same aggregate at once.
+- **Smaller boundaries** are cheaper and less contended, but some invariants can no longer be guaranteed in a single transaction.
+
+When a rule cannot live inside one aggregate, you have two tools:
+
+- **Eventual consistency** — change one aggregate, publish a domain event, and let a handler update the others a moment later. The default for keeping *separate* aggregates in sync.
+- **Corrective policies** — if you deliberately relax an invariant (often to reduce concurrency conflicts), add a process that detects and repairs the rare inconsistency, automatically or via a human step. A pile of corrective policies is a smell that logic was pushed out of the aggregate.
+
+*Example:* a clinic books 10-minute slots, with rules like "a slot is booked at most once" and "no more than N bookings per patient per month." Modeling each *slot* as its own aggregate makes "booked once" trivial to enforce with optimistic concurrency — but the monthly cap now spans many slots. Rather than swell the boundary to a whole month (large and heavily contended), keep the slot small and enforce the cap with an eventually-consistent counter or a corrective policy — a trade you make deliberately *with* the domain experts, not by default.
+
+### The Aggregate Design Canvas
+
+When a boundary is non-obvious or contended, a structured tool helps (the Aggregate Design Canvas, from the ddd-crew — a tactical counterpart to the bounded-context canvas). Work through:
+
+- **Name** — name it well; sometimes encode the scope of its lifespan.
+- **Description** — its responsibilities and purpose, *and why this boundary was chosen* and what trade-offs were accepted.
+- **State transitions** — the explicit states it moves through. Too many suggests the boundary does too much (split it); too few or trivial ones suggest it is anemic (logic leaked into services).
+- **Enforced invariants & corrective policies** — the rules it guarantees, plus any corrective policies for invariants you chose to relax. Listing both makes the trade-offs explicit.
+- **Handled commands & created events** — every command it accepts and every event it emits; wiring them together checks nothing is missing.
+- **Throughput** — how likely concurrency conflicts are: the command-handling rate and the number of clients. A shopping cart has roughly one client; a ticket-booking aggregate may have hundreds.
+- **Size** — how large an instance gets, measured in events per instance and how coarse those events are. Scoping an aggregate to a time period (e.g., a billing period) keeps it bounded.
+
+For simple aggregates the rules above are enough; reach for the canvas when the boundary is the hard part.
 
 ## Domain Event
 

@@ -35,7 +35,7 @@ The single most important strategic practice. The **ubiquitous language** is one
 
 Why it matters: most defects in complex systems come from misunderstanding, not from typos. When a domain expert says "policy" and the code says `InsuranceRecord`, every translation between the two is a chance to get the rules wrong. Name things in the code the way the business names them, and keep the names honest as your understanding evolves.
 
-### Reveal intention, not implementation
+### Keep technical detail out of the language
 
 The language should describe *what happens in the business*, not how the software does it. Technical words — flags, tables, queues, gateways — hide the domain and pull the model toward an anemic, procedural design. When you hear them, dig for the real domain concept underneath.
 
