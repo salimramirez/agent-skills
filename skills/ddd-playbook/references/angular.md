@@ -1,6 +1,8 @@
 # DDD in Angular (frontend)
 
-Read this when structuring an **Angular** app around a domain. Start with the honest part below — DDD on the frontend is *adapted*, not the same as on the backend — and then apply the structure and idioms that follow. Examples use the **QuickBite** food-delivery domain (an `ordering` feature). Idioms are Angular 20-style (standalone components, signals, `inject()`).
+Read this when structuring an **Angular** app around a domain. Start with the honest part below — DDD on the frontend is *adapted*, not the same as on the backend — and then apply the structure and idioms that follow. Examples use the **QuickBite** food-delivery domain (an `ordering` feature). Idioms follow the Angular 20+ style (standalone components, signals, `inject()`) and apply unchanged on Angular 21 and 22.
+
+> **Angular 22 note.** Everything here stays supported; v22 only *adds* modern alternatives you can opt into without changing this structure: **`@Service()`** as a shorter form of `@Injectable({ providedIn: 'root' })` (root-provided, `inject()`-only) for stores and context APIs; **Signal Forms** alongside the reactive forms shown here; and **`resource()` / `httpResource()`** as a signal-native data-fetching option in place of the manual `subscribe` in the store. Signals also pair naturally with OnPush — the default change detection from v22.
 
 ## Contents
 
