@@ -1,0 +1,20 @@
+name: Validate skills
+
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+      - '.github/workflows/validate.yml'
+      - '.github/scripts/validate-skills.py'
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate SKILL.md frontmatter and file sizes
+        run: python3 .github/scripts/validate-skills.py
