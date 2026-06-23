@@ -112,7 +112,7 @@ Real systems have several bounded contexts, and they must cooperate. A **context
 
 The key idea: a context never reaches into another's model directly. Each context exposes an **interface** to the outside, and when two contexts interact you **translate** between their two languages at the boundary rather than leaking one model into the other. That translation is what keeps each model clean and lets each evolve at its own pace.
 
-> The full catalog of context-mapping relationship patterns (anti-corruption layer, open host service, conformist, shared kernel, customer/supplier, partnership, published language, separate ways) is a deeper topic that later material in this skill will cover. For now, the essential rule is: **map the relationships explicitly, and translate at the boundary.**
+> The full catalog of context-mapping relationship patterns (anti-corruption layer, open host service, conformist, shared kernel, customer/supplier, partnership, published language, separate ways) and team relationships is covered in `references/modeling-process.md`. The essential rule here is: **map the relationships explicitly, and translate at the boundary.**
 
 ## Characteristics of a strong domain model
 

@@ -56,7 +56,7 @@ Before tactical modeling, get the big picture right:
 - **Subdomains** — distinguish the **core** (your competitive advantage — invest most here), **supporting**, and **generic** (buy/reuse) subdomains, so effort goes where it matters.
 - **Context Mapping** — define the relationships between bounded contexts (e.g., an **Anti-Corruption Layer** to protect your model from an external one).
 
-→ For depth (context-map patterns, distillation, integration), read `references/strategic-design.md`.
+→ For the strategic concepts in depth, read `references/strategic-design.md`. For the collaborative modeling process and tools (EventStorming, Domain Message Flow, Bounded Context Canvas, the context-map pattern catalog, the modeling recipe), read `references/modeling-process.md`.
 
 ## CQRS
 
