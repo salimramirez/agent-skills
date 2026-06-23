@@ -41,7 +41,7 @@ When modeling, choose the right block deliberately:
   - One aggregate = **one transaction**. Don't modify two aggregates in the same transaction; it couples their consistency.
   - Reference **other aggregates by identity (ID)**, never by holding their object — this keeps boundaries and transactions clean.
   - Enforce the aggregate's invariants inside the root, so it is always internally consistent.
-- **Domain Event** — a record that something meaningful happened in the domain (e.g., `OrderPlaced`). Use it to achieve **eventual consistency across aggregates** and to decouple side effects from the action that caused them.
+- **Domain Event** — a statement that something meaningful happened in the domain (e.g., `OrderPlaced`). Use it to achieve **eventual consistency across aggregates** and to decouple side effects from the action that caused them.
 - **Domain Service** — stateless domain logic that doesn't naturally belong to a single entity or value object (e.g., a transfer between two accounts). Keep it in the domain layer; don't confuse it with an application service.
 - **Repository** — collection-like access to aggregates by their root. Define **one repository per aggregate root**, with the interface in the domain layer and the implementation in infrastructure.
 - **Factory** — encapsulates complex creation of an aggregate or value object when a plain constructor would be unclear or would leak rules.
