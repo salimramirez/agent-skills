@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Logs / temp
+*.log
+
+# Skill evaluation artifacts (generated)
+*-workspace/
