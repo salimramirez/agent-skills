@@ -16,6 +16,7 @@ Do strategic design first (`references/strategic-design.md`); these patterns liv
 - [Repository](#repository)
 - [Factory](#factory)
 - [Choosing the right block](#choosing-the-right-block)
+- [CQRS](#cqrs)
 
 ## Model-driven design, not Smart UI
 
@@ -155,4 +156,26 @@ A quick decision guide when modeling:
 - Need to persist and retrieve an aggregate? → **Repository** (one per root).
 - Is constructing a valid object itself complex? → **Factory**.
 
-> Command Query Responsibility Segregation (CQRS) will be added to this reference in a later update.
+## CQRS
+
+Command Query Responsibility Segregation separates the model that **changes** state from the model that **reads** it. Start from the distinction:
+
+- A **command** is any operation that changes an aggregate's state (`PlaceOrder`, `CancelOrder`). The change itself lives in the domain model (an aggregate method); an application service orchestrates and persists it.
+- A **query** is any operation that only retrieves state and changes nothing.
+
+In an ordinary design a single model serves both. **CQRS is the deliberate step of giving each its own model:** a **write model** (the aggregates, enforcing invariants) and a separate **read model** shaped for how the data is actually queried and displayed.
+
+**How it works:**
+
+- The write side accepts commands, changes aggregates, and publishes domain events.
+- The read side maintains **read models** (also called *projections*): denormalized views built and kept up to date from those events, optimized for querying. Queries hit the read models, never the aggregates. In QuickBite, an "order history" screen spanning orders, payments, and deliveries can read from one projection instead of querying three aggregates.
+- Because the read model is updated from events, it is **eventually consistent** with the write side — expect a small lag, and design the UX for it.
+
+**When to use it:**
+
+- Read and write needs genuinely diverge — reports or screens that span aggregates, or very different read-vs-write load you want to scale independently.
+- Forcing one model to serve both is making the aggregate awkward (queries dragging in data the invariants don't need).
+
+**Cost and caution:** CQRS adds moving parts — a second model, projection machinery, and eventual consistency to reason about. Treat it as a deliberate choice, not a default; many bounded contexts are well served by a single model with ordinary queries. Apply it **per bounded context**, where it earns its keep, not across the whole system.
+
+**Relationship to event sourcing:** CQRS is often paired with *event sourcing* (storing an aggregate as its sequence of events and rebuilding it by replay), but the two are independent — you can use CQRS without event sourcing. Event sourcing is a separate, more advanced topic.
