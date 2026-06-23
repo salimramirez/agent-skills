@@ -2,7 +2,7 @@
 
 Read this when writing the actual code for a DDD model in **Spring Boot / Java**. It assumes you already know *what* the building blocks are and their rules (see `SKILL.md` and `references/tactical-patterns.md`); here we cover *how to express them idiomatically* in Spring Boot.
 
-No specific Spring Boot or Java version is assumed. One caveat that does depend on the version: persistence annotations live in `jakarta.persistence.*` on Spring Boot 3+ and `javax.persistence.*` on Spring Boot 2 — adjust imports accordingly. Examples use a fictional food-delivery domain, **QuickBite** (an `Order` in the Ordering context).
+No specific Spring Boot or Java version is assumed; the patterns here work on Spring Boot 3 and 4 with Java 17+ (including 21 and the 25 LTS). One caveat that does depend on the version: persistence annotations live in `jakarta.persistence.*` on Spring Boot 3 and 4 and `javax.persistence.*` on Spring Boot 2 — adjust imports accordingly. Examples use a fictional food-delivery domain, **QuickBite** (an `Order` in the Ordering context).
 
 ## Contents
 
