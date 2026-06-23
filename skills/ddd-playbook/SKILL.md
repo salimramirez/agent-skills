@@ -3,7 +3,7 @@ name: ddd-playbook
 description: Apply Domain-Driven Design (DDD) when modeling a business domain or writing backend code around business logic. Use whenever the user is designing or refactoring a domain model, structuring a backend by responsibility, or mentions DDD, bounded contexts, ubiquitous language, aggregates, entities, value objects, domain events, repositories, domain or application services, or CQRS — even if they don't say DDD explicitly. Prefer this over ad-hoc modeling whenever non-trivial business rules or invariants are involved.
 license: MIT
 metadata:
-  version: "0.1.0"
+  version: "1.0.0"
   author: Salim Ramirez
 ---
 
