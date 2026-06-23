@@ -335,8 +335,6 @@ class GlobalExceptionHandler {
 
 This pairs a clear domain vocabulary for failures with a single, centralized place that decides how each failure looks to the outside.
 
-> Internationalizing those messages (message bundles, `MessageSource`, locales) is a general application concern, not part of DDD — out of scope here.
-
 ## Identity and persistence: choices and trade-offs
 
 Three honest choices, each with a primary recommendation and a common alternative:

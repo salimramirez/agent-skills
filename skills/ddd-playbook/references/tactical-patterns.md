@@ -178,4 +178,4 @@ In an ordinary design a single model serves both. **CQRS is the deliberate step 
 
 **Cost and caution:** CQRS adds moving parts — a second model, projection machinery, and eventual consistency to reason about. Treat it as a deliberate choice, not a default; many bounded contexts are well served by a single model with ordinary queries. Apply it **per bounded context**, where it earns its keep, not across the whole system.
 
-**Relationship to event sourcing:** CQRS is often paired with *event sourcing* (storing an aggregate as its sequence of events and rebuilding it by replay), but the two are independent — you can use CQRS without event sourcing. Event sourcing is a separate, more advanced topic.
+**Relationship to event sourcing:** CQRS is often paired with *event sourcing* (storing an aggregate as its sequence of events and rebuilding it by replay), but the two are independent — you can use CQRS without event sourcing.

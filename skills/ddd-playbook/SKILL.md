@@ -11,7 +11,7 @@ metadata:
 
 Domain-Driven Design tackles complex software by putting the **business domain** — its language, rules, and invariants — at the center of the design, instead of letting the database schema, the framework, or the UI drive the model.
 
-Apply this whenever you model a domain or write code around business logic. Follow the decision rules in this file; open a reference file when you need depth on a specific area. The rules matter more than any single example — understand *why* each exists so you can apply it to cases not covered here.
+Apply this whenever you model a domain or write code around business logic. Follow the decision rules in this file; open a reference file when you need depth on a specific area. The rules matter more than any single example — understand *why* each exists so you can apply it to cases the examples don't spell out.
 
 ## Prime directive: model the domain, and protect it
 
@@ -79,4 +79,4 @@ The principles above are stack-agnostic, but the idioms (keeping persistence out
 
 - **Spring Boot / Java** → `references/spring-boot.md`
 
-More stacks will be added over time. If no reference exists for the project's stack, apply the rules above idiomatically for that technology.
+If no reference exists for the project's stack, apply the rules above idiomatically for that technology.
