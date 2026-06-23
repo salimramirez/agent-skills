@@ -23,12 +23,12 @@ Apply this whenever you model a domain or write code around business logic. Foll
 
 Organize code into four layers. Dependencies point **inward**, toward the domain; the domain depends on nothing outside itself.
 
-1. **Interfaces** — entry/exit points to the outside world: REST/GraphQL controllers, CLI, message/event listeners, schedulers, view models. Translates external input into application calls and results back out. No business logic.
-2. **Application** — orchestrates use cases (application services / command & query handlers): loads aggregates, invokes domain behavior, manages transactions and security. Coordinates, but holds **no business rules** itself.
-3. **Domain** — the heart: entities, value objects, aggregates, domain events, domain services, and repository *interfaces*. All business rules and invariants live here. Depends on nothing but itself.
-4. **Infrastructure** — technical implementations: persistence/ORM, repository implementations, messaging, external API clients, file systems. Implements the interfaces the inner layers define.
+1. **Interfaces** — the **inbound adaptors**: entry points where the outside world drives the context (REST/GraphQL controllers, CLI, message/event listeners, schedulers). Translate external input into application calls and the result back out. No business logic.
+2. **Application** — orchestrates use cases (application services, often split into **command services** and **query services**): loads aggregates, invokes domain behavior, manages transactions and security. Coordinates, but holds **no business rules** itself.
+3. **Domain** — the heart: entities, value objects, aggregates, domain events, domain services, and the repository and service *interfaces* (**ports**). All business rules and invariants live here. Depends on nothing but itself.
+4. **Infrastructure** — the **outbound adaptors**: the technical implementations the context uses to reach the outside (persistence/ORM and repository implementations, messaging, external API clients). Implements the ports the inner layers declare.
 
-This is the classic DDD layered model. It does **not** require hexagonal, onion, or "clean" architecture — those are compatible refinements you may adopt, but the non-negotiables are domain purity and the inward dependency rule.
+The inner layers declare **ports** (interfaces) and the adaptors implement them — an *inbound* adaptor brings a request into the context, an *outbound* adaptor lets it reach out. This is the classic DDD layered model; it does **not** require hexagonal, onion, or "clean" architecture — those are compatible refinements, but the non-negotiables are domain purity and the inward dependency rule.
 
 ## Tactical building blocks — how to decide
 
