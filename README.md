@@ -4,7 +4,7 @@ A collection of [Agent Skills](https://agentskills.io) — portable, model-agnos
 
 ## Skills
 
-### `ddd` — Domain-Driven Design
+### `ddd-playbook` — Domain-Driven Design
 
 Teaches an agent to follow Domain-Driven Design correctly when modeling a domain or writing backend code — so you don't have to re-explain DDD each time. It uses progressive disclosure: a lean core with the decision rules, plus reference files loaded on demand.
 
@@ -20,7 +20,7 @@ The concepts are stack-agnostic; **Spring Boot / Java** is the first implementat
 Install a skill into your agent with the [`skills` CLI](https://github.com/vercel-labs/skills):
 
 ```bash
-npx skills add salimramirez/agent-skills --skill ddd
+npx skills add salimramirez/agent-skills --skill ddd-playbook
 ```
 
 ## License
