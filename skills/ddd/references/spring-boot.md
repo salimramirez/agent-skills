@@ -46,20 +46,19 @@ com.quickbite.ordering
 │   │   ├── queries        // query types (domain)
 │   │   └── events         // domain events
 │   ├── services           // command/query service interfaces (ports)
-│   ├── repositories       // repository interfaces (ports)
 │   └── exceptions         // domain-specific exceptions
 └── infrastructure                 // outbound adaptors — the context reaches out
     └── persistence
         └── jpa
-            └── repositories       // repository implementations (Spring Data)
+            └── repositories       // Spring Data repositories
 ```
 
 **What each layer is** (dependencies always point inward, toward `domain`):
 
 - **`interfaces` — inbound adaptors.** Where the outside world drives this context: REST controllers, message/event listeners, a CLI. They turn external input into application calls and shape the response back out. No business logic.
 - **`application` — application services.** They orchestrate use cases (here split into command and query services): load aggregates, invoke their behavior, manage transactions and security. They coordinate but hold no business rules.
-- **`domain` — the domain model.** Aggregates, entities, value objects, domain events, the service and repository *interfaces* (ports), and domain exceptions. Every business rule lives here, and it depends on nothing outside itself.
-- **`infrastructure` — outbound adaptors.** The technical implementations the context uses to reach external systems: repository implementations over JPA, message publishers, external API clients. They implement the ports the inner layers declare.
+- **`domain` — the domain model.** Aggregates, entities, value objects, domain events, the service *interfaces* (ports), and domain exceptions. Every business rule lives here, and it depends on nothing outside itself.
+- **`infrastructure` — outbound adaptors.** The technical pieces the context uses to reach external systems: the Spring Data repositories, message publishers, external API clients. They implement any ports the inner layers declare.
 
 **Inbound vs. outbound adaptor** describes the direction of flow. An *inbound* adaptor brings a request *into* the context — e.g., a controller turning an HTTP call into a command. An *outbound* adaptor lets the context reach *out* to something external — e.g., a repository writing to the database, or an ACL service calling another context. The domain in the middle never knows about either: the inner layers declare **ports** (interfaces), and the adaptors implement them.
 
@@ -204,27 +203,32 @@ public interface OrderQueryService {
 
 ## Repositories
 
-Declare the repository **interface in the domain layer** as a port, in the ubiquitous language and dealing in whole aggregates by their root — one repository per aggregate root.
-
-```java
-// domain — no framework leakage
-public interface OrderRepository {
-    Optional<Order> findById(OrderId id);
-    Order save(Order order);
-}
-```
-
-Implement it in `infrastructure` with Spring Data — a Spring Data interface that satisfies the domain contract:
+Give each aggregate root a repository — collection-like access to whole aggregates by their root, one per aggregate root. The simplest and most common approach in Spring is to define a Spring Data repository **in `infrastructure`** and let command and query services depend on it directly:
 
 ```java
 // infrastructure/persistence/jpa/repositories
 @Repository
-interface OrderJpaRepository extends JpaRepository<Order, OrderId>, OrderRepository { }
+public interface OrderRepository extends JpaRepository<Order, OrderId> {
+    Optional<Order> findByCustomerId(CustomerId customerId);   // finders named in the ubiquitous language
+}
 ```
 
-`JpaRepository` already provides matching `findById` and `save`, so Spring Data wires the implementation for you.
+`JpaRepository` gives you `save`, `findById`, and the rest; add finders named in the domain's language, and keep them about whole aggregates (not arbitrary inner entities). The trade-off is that the application layer now depends on an infrastructure type.
 
-> **Common variant:** many real projects skip the domain port and put the Spring Data repository *only* in `infrastructure` (`interface OrderRepository extends JpaRepository<Order, Long>`), letting command/query services depend on it directly. Simpler, but the application then depends on an infrastructure type. Prefer the domain port when you want to keep that dependency out of the domain.
+> **Alternative — a domain port.** To keep the domain *and* the application free of any dependency on the persistence framework, declare a plain repository interface in the `domain` layer as a **port**, implemented in `infrastructure`:
+>
+> ```java
+> // domain/repositories — no framework leakage
+> public interface OrderRepository {
+>     Optional<Order> findById(OrderId id);
+>     Order save(Order order);
+> }
+>
+> // infrastructure — Spring Data satisfies the port
+> interface OrderJpaRepository extends JpaRepository<Order, OrderId>, OrderRepository { }
+> ```
+>
+> This is the purer, hexagonal-style choice; the cost is a little more indirection. Prefer it when isolating the domain from infrastructure matters for the project.
 
 ## Domain events
 
@@ -338,7 +342,7 @@ This pairs a clear domain vocabulary for failures with a single, centralized pla
 Three honest choices, each with a primary recommendation and a common alternative:
 
 - **Identity — typed id vs. surrogate base class.** *Primary:* a typed id value object (`OrderId` as `@EmbeddedId`) keeps identity a domain concept and type-safe. *Alternative (very common):* a shared `AuditableAbstractAggregateRoot` base class with a generated `Long` surrogate id plus `@CreatedDate`/`@LastModifiedDate` auditing; even then, keep typed id value objects for *cross-aggregate references* (`CustomerId`, not bare `Long`).
-- **Repository — domain port vs. infrastructure-only.** Covered above: prefer the domain port; the infrastructure-only Spring Data repository is the common pragmatic variant.
+- **Repository — infrastructure-only vs. domain port.** Covered above: the default here is a Spring Data repository in `infrastructure` that services use directly (simplest, and the common convention); declare a domain port instead when you want the persistence dependency kept out of the domain.
 - **Domain purity — JPA in the domain.** Annotating domain entities with JPA (as shown) is idiomatic and fine for most projects; the cost is a soft dependency on the persistence framework. For maximum isolation, keep the domain as plain Java and map to a separate persistence model in `infrastructure`, at the cost of mapping boilerplate.
 
 Whichever you pick, hold the non-negotiables: business rules and invariants stay in the domain model, and the domain never depends on `interfaces` or `application`.
