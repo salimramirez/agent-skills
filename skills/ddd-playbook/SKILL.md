@@ -78,5 +78,6 @@ Command Query Responsibility Segregation separates the model that **changes** st
 The principles above are stack-agnostic, but the idioms (keeping persistence out of the domain, publishing domain events, etc.) differ. When writing code, read the file for the project's stack:
 
 - **Spring Boot / Java** → `references/spring-boot.md`
+- **Angular (frontend, DDD-adapted)** → `references/angular.md`
 
 If no reference exists for the project's stack, apply the rules above idiomatically for that technology.
