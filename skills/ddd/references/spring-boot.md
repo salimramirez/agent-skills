@@ -8,126 +8,223 @@ No specific Spring Boot or Java version is assumed. One caveat that does depend 
 
 - [Package structure: the four layers](#package-structure-the-four-layers)
 - [Value objects](#value-objects)
-- [Entities and the aggregate root](#entities-and-the-aggregate-root)
+- [Aggregate root and entities](#aggregate-root-and-entities)
+- [Commands and queries](#commands-and-queries)
+- [Command services and query services](#command-services-and-query-services)
 - [Repositories](#repositories)
 - [Domain events](#domain-events)
-- [Application services](#application-services)
-- [Domain services](#domain-services)
+- [Anti-corruption layer](#anti-corruption-layer)
 - [Interfaces (REST)](#interfaces-rest)
-- [Keeping the domain pure: the JPA trade-off](#keeping-the-domain-pure-the-jpa-trade-off)
+- [Domain exceptions and error handling](#domain-exceptions-and-error-handling)
+- [Identity and persistence: choices and trade-offs](#identity-and-persistence-choices-and-trade-offs)
 
 ## Package structure: the four layers
 
-Give each **bounded context** its own package, split into the four layers. Dependencies point inward toward `domain`.
+Give each **bounded context** its own package, split into the four layers, with dependencies pointing inward toward `domain`. A common, consistent layout:
 
 ```
 com.quickbite.ordering
-├── interfaces        // REST controllers, request/response DTOs, mappers — the outside edge
-├── application       // application services (use cases), @Transactional orchestration, command/result DTOs
-├── domain            // aggregates, entities, value objects, domain events, domain services, repository interfaces
-└── infrastructure    // repository implementations, messaging, external clients — the technical edge
+├── interfaces                     // inbound adaptors — the outside drives the context
+│   ├── rest
+│   │   ├── controllers    // REST controllers
+│   │   ├── resources      // request/response DTOs
+│   │   └── transform      // assemblers: DTO <-> command/query/entity
+│   └── acl                // facade this context exposes to other contexts
+├── application                    // use-case orchestration (no business rules)
+│   └── internal
+│       ├── commandservices    // command service implementations
+│       ├── queryservices      // query service implementations
+│       ├── eventhandlers      // react to domain events
+│       └── outboundservices
+│           └── acl            // talk to other contexts through their facades
+├── domain                         // the domain model + its ports (depends on nothing)
+│   ├── model
+│   │   ├── aggregates
+│   │   ├── entities
+│   │   ├── valueobjects
+│   │   ├── commands       // command types (domain)
+│   │   ├── queries        // query types (domain)
+│   │   └── events         // domain events
+│   ├── services           // command/query service interfaces (ports)
+│   ├── repositories       // repository interfaces (ports)
+│   └── exceptions         // domain-specific exceptions
+└── infrastructure                 // outbound adaptors — the context reaches out
+    └── persistence
+        └── jpa
+            └── repositories       // repository implementations (Spring Data)
 ```
 
-The `domain` package holds the business model and **declares** the interfaces it needs (e.g. repositories); `infrastructure` implements them. Keep framework and persistence concerns out of `domain` as far as practical (see the last section).
+**What each layer is** (dependencies always point inward, toward `domain`):
+
+- **`interfaces` — inbound adaptors.** Where the outside world drives this context: REST controllers, message/event listeners, a CLI. They turn external input into application calls and shape the response back out. No business logic.
+- **`application` — application services.** They orchestrate use cases (here split into command and query services): load aggregates, invoke their behavior, manage transactions and security. They coordinate but hold no business rules.
+- **`domain` — the domain model.** Aggregates, entities, value objects, domain events, the service and repository *interfaces* (ports), and domain exceptions. Every business rule lives here, and it depends on nothing outside itself.
+- **`infrastructure` — outbound adaptors.** The technical implementations the context uses to reach external systems: repository implementations over JPA, message publishers, external API clients. They implement the ports the inner layers declare.
+
+**Inbound vs. outbound adaptor** describes the direction of flow. An *inbound* adaptor brings a request *into* the context — e.g., a controller turning an HTTP call into a command. An *outbound* adaptor lets the context reach *out* to something external — e.g., a repository writing to the database, or an ACL service calling another context. The domain in the middle never knows about either: the inner layers declare **ports** (interfaces), and the adaptors implement them.
+
+A `shared` package can hold a small shared kernel (e.g., an auditable aggregate base class) used across contexts.
 
 ## Value objects
 
-Model value objects as **immutable** types. A Java `record` is the natural fit — it is immutable and gives you value equality for free. Put validation in the compact constructor so invalid states cannot be built.
+Model value objects as **immutable** types. A Java `record` is the natural fit — immutable, with value equality for free. Validate in the compact constructor so invalid states cannot be built. Map them as JPA embeddables (`@Embeddable` on the type; `@Embedded` where used).
 
 ```java
 public record Money(BigDecimal amount, Currency currency) {
     public Money {
-        Objects.requireNonNull(amount);
-        Objects.requireNonNull(currency);
+        if (amount == null || currency == null) throw new IllegalArgumentException("money requires amount and currency");
         if (amount.signum() < 0) throw new IllegalArgumentException("amount cannot be negative");
     }
-
     public Money add(Money other) {
-        if (!currency.equals(other.currency))
-            throw new IllegalArgumentException("cannot add different currencies");
+        if (!currency.equals(other.currency)) throw new IllegalArgumentException("cannot add different currencies");
         return new Money(amount.add(other.amount), currency);
     }
 }
 ```
 
-To persist a value object as part of an aggregate, map it as a JPA embeddable (`@Embeddable` on the type, `@Embedded` where it is used). Recent Hibernate versions can embed records directly; on older ones, use a small immutable class with the same shape. Either way the type stays defined by its values, not by an identity.
+Use value objects for **typed identifiers** too, so a reference to another aggregate stays type-safe and meaningful:
 
-## Entities and the aggregate root
+```java
+@Embeddable
+public record CustomerId(Long value) {
+    public CustomerId {
+        if (value == null || value < 1) throw new IllegalArgumentException("invalid customer id");
+    }
+}
+```
 
-The aggregate root is a JPA `@Entity`. Give it a **typed identifier** (itself a value object), put real **behavior** on it (not just getters/setters), enforce invariants inside it, and **reference other aggregates by their id** — never map a `@ManyToOne` to another aggregate root.
+## Aggregate root and entities
 
-Use named static factory methods for creation, and extend Spring Data's `AbstractAggregateRoot` so the aggregate can register domain events.
+The aggregate root is a JPA `@Entity`. Give it real **behavior** (not just getters/setters), enforce invariants inside it, and **reference other aggregates by their typed id value object** — never map a `@ManyToOne` to another aggregate root. Extend Spring Data's `AbstractAggregateRoot` so the aggregate can register domain events. A useful idiom is a constructor (or static factory) that builds the aggregate straight from a command.
 
 ```java
 @Entity
-@Table(name = "orders")
 public class Order extends AbstractAggregateRoot<Order> {
 
     @EmbeddedId
     private OrderId id;
 
     @Embedded
-    private CustomerId customerId;          // another aggregate, referenced by id only
+    private CustomerId customerId;        // another aggregate, referenced by typed id only
 
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
     @ElementCollection
-    @CollectionTable(name = "order_lines", joinColumns = @JoinColumn(name = "order_id"))
     private List<OrderLine> lines = new ArrayList<>();
 
-    protected Order() { }                   // required by JPA, not for application use
+    protected Order() { }                 // required by JPA
 
-    public static Order place(OrderId id, CustomerId customerId, List<OrderLine> lines) {
-        if (lines.isEmpty()) throw new IllegalArgumentException("an order needs at least one line");
-        Order order = new Order();
-        order.id = id;
-        order.customerId = customerId;
-        order.lines = new ArrayList<>(lines);
-        order.status = OrderStatus.PLACED;
-        order.registerEvent(new OrderPlaced(id, customerId));   // raise a domain event
-        return order;
+    public Order(PlaceOrderCommand command) {
+        if (command.lines().isEmpty()) throw new IllegalArgumentException("an order needs at least one line");
+        this.id = OrderId.newId();
+        this.customerId = command.customerId();
+        this.lines = new ArrayList<>(command.lines());
+        this.status = OrderStatus.PLACED;
+        registerEvent(new OrderPlaced(id, customerId));   // raise a domain event
     }
 
     public void cancel() {
-        if (status == OrderStatus.SHIPPED)
-            throw new IllegalStateException("a shipped order cannot be cancelled");
+        if (status == OrderStatus.SHIPPED) throw new IllegalStateException("a shipped order cannot be cancelled");
         status = OrderStatus.CANCELLED;
         registerEvent(new OrderCancelled(id));
     }
 
     public Money total() {
-        return lines.stream()
-                    .map(OrderLine::subtotal)
-                    .reduce(Money.zero(), Money::add);
+        return lines.stream().map(OrderLine::subtotal).reduce(Money.zero(), Money::add);
     }
-
-    public OrderId id() { return id; }
 }
 ```
 
-Entities and value objects *inside* the aggregate (here `OrderLine`) are reached only through the root — outside code never modifies them directly. This is what lets the root guarantee the aggregate's invariants.
+Entities and value objects *inside* the aggregate (here `OrderLine`) are reached only through the root — that is what lets the root guarantee the aggregate's invariants.
+
+## Commands and queries
+
+Make **commands** and **queries** first-class types in the domain, as records that validate their own input. A command expresses an intent to *change* state; a query expresses an intent to *read* it.
+
+```java
+public record PlaceOrderCommand(CustomerId customerId, List<OrderLine> lines) {
+    public PlaceOrderCommand {
+        if (customerId == null) throw new IllegalArgumentException("customerId is required");
+    }
+}
+
+public record GetOrderByIdQuery(OrderId orderId) { }
+```
+
+## Command services and query services
+
+Split the application layer along the command/query line (this is CQRS in practice — see `tactical-patterns.md`). Declare the **service interfaces in the domain** (`domain/services`) as ports, and **implement them in the application layer**.
+
+A **command service** handles commands: it loads or creates an aggregate, invokes its behavior, persists it, and returns just an identifier. It holds **no business rules** — those live in the aggregate.
+
+```java
+// domain/services — the port
+public interface OrderCommandService {
+    OrderId handle(PlaceOrderCommand command);
+    void handle(CancelOrderCommand command);
+}
+
+// application/internal/commandservices — the implementation
+@Service
+public class OrderCommandServiceImpl implements OrderCommandService {
+
+    private final OrderRepository orders;
+
+    public OrderCommandServiceImpl(OrderRepository orders) {
+        this.orders = orders;
+    }
+
+    @Override
+    @Transactional
+    public OrderId handle(PlaceOrderCommand command) {
+        var order = new Order(command);
+        orders.save(order);              // registered domain events are published here
+        return order.id();
+    }
+
+    @Override
+    @Transactional
+    public void handle(CancelOrderCommand command) {
+        var order = orders.findById(command.orderId())
+                          .orElseThrow(() -> new IllegalArgumentException("order not found"));
+        order.cancel();
+        orders.save(order);
+    }
+}
+```
+
+A **query service** handles queries and returns data for reading; keep it free of state changes.
+
+```java
+public interface OrderQueryService {
+    Optional<Order> handle(GetOrderByIdQuery query);
+}
+```
 
 ## Repositories
 
-Declare the repository **interface in the domain layer**, in the ubiquitous language and dealing in whole aggregates by their root — one repository per aggregate root.
+Declare the repository **interface in the domain layer** as a port, in the ubiquitous language and dealing in whole aggregates by their root — one repository per aggregate root.
 
 ```java
-// domain layer — no framework leakage
+// domain — no framework leakage
 public interface OrderRepository {
     Optional<Order> findById(OrderId id);
     Order save(Order order);
 }
 ```
 
-Implement it in `infrastructure` with Spring Data. The pragmatic idiom is a Spring Data interface that satisfies the domain contract:
+Implement it in `infrastructure` with Spring Data — a Spring Data interface that satisfies the domain contract:
 
 ```java
-// infrastructure layer
+// infrastructure/persistence/jpa/repositories
+@Repository
 interface OrderJpaRepository extends JpaRepository<Order, OrderId>, OrderRepository { }
 ```
 
-`JpaRepository` already provides matching `findById` and `save`, so Spring Data wires the implementation for you. (If you prefer to keep even the Spring Data type out of the domain, keep `OrderRepository` plain and add a thin adapter in `infrastructure` that delegates to a `JpaRepository`.)
+`JpaRepository` already provides matching `findById` and `save`, so Spring Data wires the implementation for you.
+
+> **Common variant:** many real projects skip the domain port and put the Spring Data repository *only* in `infrastructure` (`interface OrderRepository extends JpaRepository<Order, Long>`), letting command/query services depend on it directly. Simpler, but the application then depends on an infrastructure type. Prefer the domain port when you want to keep that dependency out of the domain.
 
 ## Domain events
 
@@ -137,87 +234,111 @@ Define each event as an immutable record in the domain, named in the past tense:
 public record OrderPlaced(OrderId orderId, CustomerId customerId) { }
 ```
 
-Because `Order` extends `AbstractAggregateRoot` and calls `registerEvent(...)`, Spring Data **publishes the registered events automatically when the aggregate is saved** through its repository. Handle them with `@TransactionalEventListener` so a handler runs after the transaction commits — the basis for keeping other aggregates eventually consistent:
+Because the aggregate extends `AbstractAggregateRoot` and calls `registerEvent(...)`, Spring Data **publishes the registered events automatically when the aggregate is saved**. Handle them in `application/internal/eventhandlers` with `@TransactionalEventListener`, so handlers run after commit — the basis for keeping other aggregates eventually consistent.
 
 ```java
 @Component
 class OrderPlacedHandler {
-
     @TransactionalEventListener
     void on(OrderPlaced event) {
-        // e.g. notify the kitchen, award loyalty points, start dispatch — each decoupled
+        // notify the kitchen, start dispatch, award loyalty points — each decoupled
     }
 }
 ```
 
-## Application services
+## Anti-corruption layer
 
-An application service orchestrates one **use case**: it loads aggregates, invokes their behavior, and manages the transaction — but holds **no business rules** itself. Annotate it `@Service` and `@Transactional`, take a command, return a small result.
+When this context needs something from **another** bounded context, do not import its model. The provider context exposes a **facade interface** (in its `interfaces/acl`); the consumer calls it through an **outbound ACL service** that translates the result into *its own* value objects. This is the strategic anti-corruption layer, realized in code.
 
 ```java
+// Customer context exposes — customer/interfaces/acl
+public interface CustomerContextFacade {
+    Long fetchCustomerIdByEmail(String email);
+}
+
+// Ordering context consumes — ordering/application/internal/outboundservices/acl
 @Service
-public class PlaceOrderService {
+public class ExternalCustomerService {
+    private final CustomerContextFacade customers;
+    public ExternalCustomerService(CustomerContextFacade customers) { this.customers = customers; }
 
-    private final OrderRepository orders;
-
-    public PlaceOrderService(OrderRepository orders) {
-        this.orders = orders;
-    }
-
-    @Transactional
-    public OrderId handle(PlaceOrderCommand command) {
-        Order order = Order.place(OrderId.newId(), command.customerId(), command.lines());
-        orders.save(order);            // registered domain events are published here
-        return order.id();
+    public Optional<CustomerId> fetchCustomerByEmail(String email) {
+        var id = customers.fetchCustomerIdByEmail(email);
+        return id == 0L ? Optional.empty() : Optional.of(new CustomerId(id));  // translate to our VO
     }
 }
 ```
-
-The command (`PlaceOrderCommand`) and result are plain DTOs of the application layer; keep domain objects from leaking out to callers.
-
-## Domain services
-
-When logic genuinely spans aggregates or has no natural home on one, use a **stateless** domain service. Keep it in the `domain` layer and free of orchestration; it expresses a business rule, not a use case.
-
-```java
-// domain layer — stateless, no persistence, no transactions
-public class DeliveryFeePolicy {
-    public Money feeFor(DeliveryDistance distance, Money orderTotal) {
-        // pure business calculation over the values it is given
-    }
-}
-```
-
-Reach for this sparingly — most behavior belongs *on* an entity or value object. A drift toward many services holding the logic is how an anemic model creeps back in.
 
 ## Interfaces (REST)
 
-The controller is a thin edge: it accepts a request DTO, turns it into a command, calls the application service, and maps the result back out. No business logic, and no domain types in the API contract.
+The controller is a thin edge: it accepts a request **resource** (DTO), uses a **transformer** (assembler) to turn it into a command or query, calls the service, and transforms the result back out. No business logic, and no domain types in the API contract.
 
 ```java
 @RestController
 @RequestMapping("/orders")
 class OrderController {
 
-    private final PlaceOrderService placeOrder;
+    private final OrderCommandService orderCommandService;
 
-    OrderController(PlaceOrderService placeOrder) {
-        this.placeOrder = placeOrder;
+    OrderController(OrderCommandService orderCommandService) {
+        this.orderCommandService = orderCommandService;
     }
 
     @PostMapping
-    ResponseEntity<Void> place(@RequestBody PlaceOrderRequest request) {
-        OrderId id = placeOrder.handle(request.toCommand());
+    ResponseEntity<Void> place(@RequestBody PlaceOrderResource resource) {
+        var command = PlaceOrderCommandFromResourceAssembler.toCommand(resource);
+        var id = orderCommandService.handle(command);
         return ResponseEntity.created(URI.create("/orders/" + id.value())).build();
     }
 }
 ```
 
-## Keeping the domain pure: the JPA trade-off
+## Domain exceptions and error handling
 
-There is a real tension: the cleanest DDD keeps the domain free of any framework, but the examples above put JPA annotations directly on the domain `Order`. Two honest options:
+Express failures in the **ubiquitous language**, not as generic errors. Define domain-specific exceptions in `domain/exceptions`, thrown by the domain (or its services) when an invariant breaks or an aggregate is missing:
 
-- **Pragmatic (shown here):** annotate the domain entities with JPA. Far less code, idiomatic in Spring, and fine for most projects — the rules and behavior still live in the model. The cost is a soft dependency on the persistence framework.
-- **Pure:** keep the domain as plain Java and add a **separate persistence model** in `infrastructure` (JPA entities that mirror the aggregate), mapping between them in the repository implementation. Maximum isolation, at the cost of mapping boilerplate.
+```java
+// domain/exceptions
+public class OrderNotFoundException extends RuntimeException {
+    public OrderNotFoundException(OrderId id) {
+        super("Order with id %s not found".formatted(id.value()));
+    }
+}
+```
 
-Choose by project size and how strict your isolation needs are. Whichever you pick, hold the non-negotiables: business rules and invariants stay in the domain model, and the domain never depends on `interfaces` or `application`.
+Keep these exceptions free of web/HTTP concerns — no status codes inside them. That preserves domain purity and lets the same exception surface over REST, messaging, or a CLI.
+
+Translate them to transport responses at the edge, in **one place**: a `@RestControllerAdvice` in the interfaces layer maps each exception to a status code, so controllers stay clean.
+
+```java
+// interfaces/rest — one handler for the whole app
+@RestControllerAdvice
+class GlobalExceptionHandler {
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    ErrorResponse handle(OrderNotFoundException ex) {
+        return ErrorResponse.create(ex, HttpStatusCode.valueOf(404), ex.getMessage());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)   // e.g. value-object validation failures
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    ErrorResponse handle(IllegalArgumentException ex) {
+        return ErrorResponse.create(ex, HttpStatusCode.valueOf(400), ex.getMessage());
+    }
+}
+```
+
+This pairs a clear domain vocabulary for failures with a single, centralized place that decides how each failure looks to the outside.
+
+> Internationalizing those messages (message bundles, `MessageSource`, locales) is a general application concern, not part of DDD — out of scope here.
+
+## Identity and persistence: choices and trade-offs
+
+Three honest choices, each with a primary recommendation and a common alternative:
+
+- **Identity — typed id vs. surrogate base class.** *Primary:* a typed id value object (`OrderId` as `@EmbeddedId`) keeps identity a domain concept and type-safe. *Alternative (very common):* a shared `AuditableAbstractAggregateRoot` base class with a generated `Long` surrogate id plus `@CreatedDate`/`@LastModifiedDate` auditing; even then, keep typed id value objects for *cross-aggregate references* (`CustomerId`, not bare `Long`).
+- **Repository — domain port vs. infrastructure-only.** Covered above: prefer the domain port; the infrastructure-only Spring Data repository is the common pragmatic variant.
+- **Domain purity — JPA in the domain.** Annotating domain entities with JPA (as shown) is idiomatic and fine for most projects; the cost is a soft dependency on the persistence framework. For maximum isolation, keep the domain as plain Java and map to a separate persistence model in `infrastructure`, at the cost of mapping boilerplate.
+
+Whichever you pick, hold the non-negotiables: business rules and invariants stay in the domain model, and the domain never depends on `interfaces` or `application`.
