@@ -7,6 +7,7 @@ No specific Spring Boot or Java version is assumed. One caveat that does depend 
 ## Contents
 
 - [Package structure: the four layers](#package-structure-the-four-layers)
+- [The shared kernel](#the-shared-kernel)
 - [Value objects](#value-objects)
 - [Aggregate root and entities](#aggregate-root-and-entities)
 - [Commands and queries](#commands-and-queries)
@@ -31,6 +32,7 @@ com.quickbite.ordering
 │   │   └── transform              // assemblers: resource <-> command / entity
 │   └── acl                // facade this context exposes to other contexts
 ├── application                    // use-case orchestration (no business rules)
+│   ├── acl                    // this context's facade implementation
 │   └── internal
 │       ├── commandservices    // command service implementations
 │       ├── queryservices      // query service implementations
@@ -62,7 +64,38 @@ com.quickbite.ordering
 
 **Inbound vs. outbound adaptor** describes the direction of flow. An *inbound* adaptor brings a request *into* the context — e.g., a controller turning an HTTP call into a command. An *outbound* adaptor lets the context reach *out* to something external — e.g., a repository writing to the database, or an ACL service calling another context. The domain in the middle never knows about either: the inner layers declare **ports** (interfaces), and the adaptors implement them.
 
-A `shared` package can hold a small shared kernel (e.g., an auditable aggregate base class) used across contexts.
+## The shared kernel
+
+A `shared` package holds the small **shared kernel** every context reuses — base classes for the domain model, common REST resources, and cross-cutting technical configuration (a snake-case table-naming strategy, OpenAPI setup, database migrations). Keep it small and stable; it must never hold business rules — those belong to a bounded context.
+
+When a project chooses the surrogate-id + auditing approach (a common alternative — see [Identity and persistence](#identity-and-persistence-choices-and-trade-offs)), a base class carries that decision. `AuditableAbstractAggregateRoot` is the base for **aggregate roots**: it extends Spring Data's `AbstractAggregateRoot` (so it can register domain events) and adds a generated surrogate id plus created/updated timestamps.
+
+```java
+// shared/domain/model/aggregates
+@Getter
+@MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
+public class AuditableAbstractAggregateRoot<T extends AbstractAggregateRoot<T>> extends AbstractAggregateRoot<T> {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private Date createdAt;
+    @LastModifiedDate
+    @Column(nullable = false)
+    private Date updatedAt;
+}
+```
+
+A sibling `AuditableModel` gives the same surrogate id and timestamps to **entities inside an aggregate** that aren't the root (without the event-registration base). For the timestamps to populate, enable auditing with `@EnableJpaAuditing` on a configuration class.
+
+The shared kernel is also the home for a generic response resource reused across contexts — for example a message returned after a delete:
+
+```java
+// shared/interfaces/rest/resources
+public record MessageResource(String message) { }
+```
 
 ## Value objects
 
@@ -92,9 +125,20 @@ public record CustomerId(Long value) {
 }
 ```
 
+JPA needs a no-argument constructor to hydrate an embeddable, so give value objects a default constructor alongside the validating one — a record can declare its compact canonical constructor *and* a no-arg one that supplies a default:
+
+```java
+@Embeddable
+public record EmailAddress(@Email String address) {
+    public EmailAddress() { this(null); }   // required by JPA
+}
+```
+
+A record fits most value objects, but use an `@Embeddable` **class** when the value object has to map a JPA association or collection — a record can't, because its components are final. A `LearningPath` that owns a `@OneToMany` list of items is such a case: a class with behavior, owned wholly by its aggregate and reached only through it.
+
 ## Aggregate root and entities
 
-The aggregate root is a JPA `@Entity`. Give it real **behavior** (not just getters/setters), enforce invariants inside it, and **reference other aggregates by their typed id value object** — never map a `@ManyToOne` to another aggregate root. Extend Spring Data's `AbstractAggregateRoot` so the aggregate can register domain events. A useful idiom is a constructor (or static factory) that builds the aggregate straight from a command.
+The aggregate root is a JPA `@Entity`. Give it real **behavior** (not just getters/setters), enforce invariants inside it, and **reference other aggregates by their typed id value object** — never map a `@ManyToOne` to another aggregate root. Extend Spring Data's `AbstractAggregateRoot` so the aggregate can register domain events (or a shared `AuditableAbstractAggregateRoot` that also adds a surrogate id and audit timestamps — see [The shared kernel](#the-shared-kernel)). A useful idiom is a constructor (or static factory) that builds the aggregate straight from a command.
 
 ```java
 @Getter   // Lombok: generates getId(), getCustomerId(), getStatus(), getLines()
@@ -121,13 +165,13 @@ public class Order extends AbstractAggregateRoot<Order> {
         this.customerId = command.customerId();
         this.lines = new ArrayList<>(command.lines());
         this.status = OrderStatus.PLACED;
-        registerEvent(new OrderPlaced(id, customerId));   // raise a domain event
+        registerEvent(new OrderPlaced(this, id, customerId));   // raise a domain event
     }
 
     public void cancel() {
         if (status == OrderStatus.SHIPPED) throw new IllegalStateException("a shipped order cannot be cancelled");
         status = OrderStatus.CANCELLED;
-        registerEvent(new OrderCancelled(id));
+        registerEvent(new OrderCancelled(this, id));
     }
 
     public Money total() {
@@ -258,32 +302,60 @@ public interface OrderRepository extends JpaRepository<Order, OrderId> {
 
 ## Domain events
 
-Define each event as an immutable record in the domain, named in the past tense:
+Model each event as a class in the domain, named in the past tense, extending Spring's `ApplicationEvent`. Keep the payload `final` (an event is an immutable fact) and take the source that raised it as the first constructor argument:
 
 ```java
-public record OrderPlaced(OrderId orderId, CustomerId customerId) { }
-```
+// domain/model/events
+@Getter
+public class OrderPlaced extends ApplicationEvent {
+    private final OrderId orderId;
+    private final CustomerId customerId;
 
-Because the aggregate extends `AbstractAggregateRoot` and calls `registerEvent(...)`, Spring Data **publishes the registered events automatically when the aggregate is saved**. Handle them in `application/internal/eventhandlers` with `@TransactionalEventListener`, so handlers run after commit — the basis for keeping other aggregates eventually consistent.
-
-```java
-@Component
-class OrderPlacedHandler {
-    @TransactionalEventListener
-    void on(OrderPlaced event) {
-        // notify the kitchen, start dispatch, award loyalty points — each decoupled
+    public OrderPlaced(Object source, OrderId orderId, CustomerId customerId) {
+        super(source);                 // the aggregate that raised the event
+        this.orderId = orderId;
+        this.customerId = customerId;
     }
 }
 ```
 
+The aggregate raises it from inside its own behavior with `registerEvent`, passing itself as the source (as shown in `Order` above). Because the aggregate extends `AbstractAggregateRoot`, Spring Data **publishes the registered events automatically when the aggregate is saved**. Handle them in `application/internal/eventhandlers` — a `@Service` whose method reacts to the event and orchestrates the follow-up through the relevant services:
+
+```java
+// application/internal/eventhandlers
+@Service
+public class OrderPlacedHandler {
+    @EventListener
+    public void on(OrderPlaced event) {
+        // react via the relevant services — notify kitchen, start dispatch, award points (event.getOrderId())
+    }
+}
+```
+
+`@EventListener` runs the handler synchronously, inside the same transaction that saved the aggregate — the simplest option. Switch to `@TransactionalEventListener` when the handler must run only **after** the transaction commits (e.g. sending an email or calling an external system that must not fire if the write rolls back). Spring can also publish a plain POJO as an event, so a record works too; extending `ApplicationEvent` keeps the event explicit and carries the source that raised it.
+
 ## Anti-corruption layer
 
-When this context needs something from **another** bounded context, do not import its model. The provider context exposes a **facade interface** (in its `interfaces/acl`); the consumer calls it through an **outbound ACL service** that translates the result into *its own* value objects. This is the strategic anti-corruption layer, realized in code.
+When this context needs something from **another** bounded context, do not import its model. The provider context exposes a **facade interface** (in its `interfaces/acl`) and implements it in `application/acl`, returning only primitives or ids — never its own domain types. The consumer calls that facade through an **outbound ACL service** that translates the result into *its own* value objects. This is the strategic anti-corruption layer, realized in code.
 
 ```java
 // Customer context exposes — customer/interfaces/acl
 public interface CustomerContextFacade {
     Long fetchCustomerIdByEmail(String email);
+}
+
+// Customer context implements — customer/application/acl
+@Service
+public class CustomerContextFacadeImpl implements CustomerContextFacade {
+    private final CustomerQueryService customerQueryService;
+    public CustomerContextFacadeImpl(CustomerQueryService customerQueryService) {
+        this.customerQueryService = customerQueryService;
+    }
+    @Override
+    public Long fetchCustomerIdByEmail(String email) {
+        return customerQueryService.handle(new GetCustomerByEmailQuery(email))
+            .map(Customer::getId).orElse(0L);   // 0 signals "not found" across the boundary
+    }
 }
 
 // Ordering context consumes — ordering/application/internal/outboundservices/acl
@@ -420,7 +492,7 @@ This pairs a clear domain vocabulary for failures with a single, centralized pla
 
 Three honest choices, each with a primary recommendation and a common alternative:
 
-- **Identity — typed id vs. surrogate base class.** *Primary:* a typed id value object (`OrderId` as `@EmbeddedId`) keeps identity a domain concept and type-safe. *Alternative (very common):* a shared `AuditableAbstractAggregateRoot` base class with a generated `Long` surrogate id plus `@CreatedDate`/`@LastModifiedDate` auditing; even then, keep typed id value objects for *cross-aggregate references* (`CustomerId`, not bare `Long`).
+- **Identity — typed id vs. surrogate base class.** *Primary:* a typed id value object (`OrderId` as `@EmbeddedId`) keeps identity a domain concept and type-safe. *Alternative (very common):* the shared `AuditableAbstractAggregateRoot` base class with a generated `Long` surrogate id and audit timestamps (see [The shared kernel](#the-shared-kernel)); even then, keep typed id value objects for *cross-aggregate references* (`CustomerId`, not bare `Long`).
 - **Repository — infrastructure-only vs. domain port.** Covered above: the default here is a Spring Data repository in `infrastructure` that services use directly (simplest, and the common convention); declare a domain port instead when you want the persistence dependency kept out of the domain.
 - **Domain purity — JPA in the domain.** Annotating domain entities with JPA (as shown) is idiomatic and fine for most projects; the cost is a soft dependency on the persistence framework. For maximum isolation, keep the domain as plain Java and map to a separate persistence model in `infrastructure`, at the cost of mapping boilerplate.
 
