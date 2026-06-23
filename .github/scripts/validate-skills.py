@@ -40,8 +40,14 @@ def get_key(fm_lines, key):
 def main():
     errors = []
 
+    # A skill is a directory under skills/. Skip dotfiles and local-only
+    # eval artifacts (skills/<name>-workspace/, gitignored) which aren't skills.
     skill_dirs = (
-        sorted(p for p in SKILLS_DIR.iterdir() if p.is_dir())
+        sorted(
+            p
+            for p in SKILLS_DIR.iterdir()
+            if p.is_dir() and not p.name.startswith(".") and not p.name.endswith("-workspace")
+        )
         if SKILLS_DIR.is_dir()
         else []
     )
