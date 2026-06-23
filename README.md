@@ -11,9 +11,9 @@ Teaches an agent to follow Domain-Driven Design correctly when modeling a domain
 - **Strategic design** — ubiquitous language, subdomains, bounded contexts, context mapping, domain storytelling.
 - **Modeling process** — EventStorming, Domain Message Flow Modelling, the Bounded Context Canvas, the context-map pattern catalog.
 - **Tactical patterns** — entities, value objects, aggregates (with aggregate-boundary design), domain events, domain services, repositories, factories, and CQRS.
-- **Implementation** — idiomatic DDD in Spring Boot: the four-layer architecture, command/query services, repositories, domain events, anti-corruption layers, domain exceptions, and more.
+- **Implementation** — idiomatic DDD per stack: **Spring Boot / Java** (four-layer architecture, command/query services, repositories, domain events, anti-corruption layers, the shared kernel, domain exceptions) and **Angular** (DDD-adapted for the frontend: bounded-context feature folders, the shared kernel, signal stores, repository-as-endpoint, assemblers as anti-corruption layer).
 
-The concepts are stack-agnostic; **Spring Boot / Java** is the first implementation reference, with more stacks to come.
+The concepts are stack-agnostic, with implementation references for **Spring Boot / Java** and **Angular**.
 
 ## Installation
 
