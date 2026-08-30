@@ -4,6 +4,7 @@
 For each skills/<name>/SKILL.md this checks:
   - a YAML frontmatter block delimited by '---'
   - required keys present and non-empty: name, description
+  - every frontmatter value survives a real YAML parser
   - frontmatter `name` matches the skill's directory name
   - SKILL.md and every Markdown file in the skill are <= 500 lines
 
@@ -43,6 +44,30 @@ def get_key(fm_lines, key):
     for line in fm_lines:
         if line.startswith(prefix):
             return line[len(prefix):].strip().strip('"').strip("'")
+    return None
+
+
+def scalar_problem(raw):
+    """Return why a frontmatter value would not survive a YAML parser, or None.
+
+    Values here are written as plain (unquoted) scalars. A YAML parser ends a
+    plain scalar at ": " and starts a comment at " #", so either one truncates
+    the value -- or rejects the document -- rather than failing loudly here.
+    This module deliberately has no dependencies, so instead of parsing YAML we
+    reject the constructs that make a plain scalar ambiguous. Quote the value
+    when it genuinely needs one of them.
+    """
+    value = raw.strip()
+    if not value:
+        return None
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return None  # quoted: the parser handles whatever is inside
+    if ": " in value:
+        return "contains ': ' outside quotes, which ends a plain YAML scalar"
+    if " #" in value:
+        return "contains ' #' outside quotes, which starts a YAML comment"
+    if value[0] in "[]{}&*!|>%@`,":
+        return f"starts with the YAML indicator {value[0]!r}"
     return None
 
 
@@ -120,6 +145,16 @@ def main():
                 )
             if not description:
                 errors.append(f"{skill.name}/SKILL.md: frontmatter 'description' is missing or empty")
+
+            for line in fm:
+                key, sep, raw = line.partition(":")
+                if not sep or not key.strip() or key.lstrip().startswith("#"):
+                    continue
+                problem = scalar_problem(raw)
+                if problem:
+                    errors.append(
+                        f"{skill.name}/SKILL.md: frontmatter '{key.strip()}' {problem}"
+                    )
 
         for md in sorted(skill.rglob("*.md")):
             count = len(md.read_text(encoding="utf-8").splitlines())
