@@ -21,6 +21,12 @@ The implementation half for **Spring Boot / Java**, as a skill of its own: the f
 
 It carries the DDD design rules it depends on, so it works without `ddd-playbook` installed. Reach for `ddd-playbook` alongside it when the work is modeling rather than coding.
 
+### `ddd-angular` — DDD in Angular
+
+The implementation half for the **Angular** frontend: bounded contexts as feature folders, the shared kernel, entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, views and components, per-context routing, and reactive forms.
+
+It is honest about what DDD means on a client: the backend owns the invariants, so this is DDD-inspired organization, not a second place to enforce business rules. Like the Spring Boot skill, it carries the design rules it depends on and works on its own.
+
 ## Installation
 
 Install a skill into your agent with the [`skills` CLI](https://github.com/vercel-labs/skills):
@@ -31,6 +37,10 @@ npx skills add salimramirez/agent-skills --skill ddd-playbook
 
 ```bash
 npx skills add salimramirez/agent-skills --skill ddd-spring-boot
+```
+
+```bash
+npx skills add salimramirez/agent-skills --skill ddd-angular
 ```
 
 ## License
