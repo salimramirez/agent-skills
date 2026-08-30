@@ -4,7 +4,7 @@ description: Apply Domain-Driven Design (DDD) when modeling a business domain or
 license: MIT
 metadata:
   version: "1.0.1"
-  author: Salim Ramirez
+  author: Copyright 2026 Salim Ramirez
 ---
 
 # Domain-Driven Design (DDD)
