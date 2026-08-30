@@ -13,6 +13,8 @@ Domain-Driven Design tackles complex software by putting the **business domain**
 
 Apply this whenever you model a domain or write code around business logic. Follow the decision rules in this file; open a reference file when you need depth on a specific area. The rules matter more than any single example — understand *why* each exists so you can apply it to cases the examples don't spell out.
 
+<!-- ddd:core:start -->
+
 ## Prime directive: model the domain, and protect it
 
 - Put business rules and invariants **inside the domain model itself**, not scattered across controllers, services, or SQL. A model that only holds data while the logic lives elsewhere is an *anemic domain model* — the most common DDD failure, and the main thing this skill exists to prevent.
@@ -30,6 +32,10 @@ Organize code into four layers. Dependencies point **inward**, toward the domain
 
 The inner layers declare **ports** (interfaces) and the adaptors implement them — an *inbound* adaptor brings a request into the context, an *outbound* adaptor lets it reach out. This is the classic DDD layered model; it does **not** require hexagonal, onion, or "clean" architecture — those are compatible refinements, but the non-negotiables are domain purity and the inward dependency rule.
 
+## Bounded contexts
+
+A **bounded context** is an explicit boundary within which a model and its ubiquitous language stay consistent. The same word can mean different things in different contexts (a "Customer" in Sales ≠ in Support); don't force one model across the whole system.
+
 ## Tactical building blocks — how to decide
 
 When modeling, choose the right block deliberately:
@@ -46,23 +52,12 @@ When modeling, choose the right block deliberately:
 - **Repository** — collection-like access to aggregates by their root. Define **one repository per aggregate root**, with the interface in the domain layer and the implementation in infrastructure.
 - **Factory** — encapsulates complex creation of an aggregate or value object when a plain constructor would be unclear or would leak rules.
 
-→ For the full catalog with detailed rules, trade-offs, and worked examples, read `references/tactical-patterns.md`.
-
-## Strategic design — essentials
-
-Before tactical modeling, get the big picture right:
-
-- **Bounded Context** — an explicit boundary within which a model and its ubiquitous language stay consistent. The same word can mean different things in different contexts (a "Customer" in Sales ≠ in Support); don't force one model across the whole system.
-- **Subdomains** — distinguish the **core** (your competitive advantage — invest most here), **supporting**, and **generic** (buy/reuse) subdomains, so effort goes where it matters.
-- **Context Mapping** — define the relationships between bounded contexts (e.g., an **Anti-Corruption Layer** to protect your model from an external one).
-
-→ For the strategic concepts in depth, read `references/strategic-design.md`. For the collaborative modeling process and tools (EventStorming, Domain Message Flow, Bounded Context Canvas, the context-map pattern catalog, the modeling recipe), read `references/modeling-process.md`.
-
 ## CQRS
 
-Command Query Responsibility Segregation separates the model that **changes** state (commands) from the model that **reads** it (queries). Reach for it when read and write needs genuinely diverge — complex queries, very different read/write load, or read models that span aggregates. Treat it as a deliberate choice, not a default: it adds moving parts, and many domains are well served by a single model.
+Command Query Responsibility Segregation separates the model that **changes** state (commands) from the model that **reads** it (queries). It comes in two strengths, and conflating them is a common source of over-engineering:
 
-→ For depth (read models, eventual consistency, relationship to event sourcing), read `references/tactical-patterns.md`.
+- **The light form** — split the application layer along the command/query line (command services and query services). One model, one store, no eventual consistency. It is cheap, it keeps write orchestration from tangling with read orchestration, and it is a reasonable default.
+- **The full form** — give each side its own *model*: a write model (the aggregates, enforcing invariants) and a separate read model shaped for how the data is queried, kept up to date from domain events. It buys queries that span aggregates and independent scaling; it costs projection machinery and eventual consistency. Treat it as a deliberate choice per bounded context, not a default.
 
 ## How to approach a DDD task
 
@@ -71,7 +66,22 @@ Command Query Responsibility Segregation separates the model that **changes** st
 3. **Find the aggregates and their invariants** — what must always be true, and what is the consistency boundary?
 4. **Model tactically** — choose value objects, entities, and aggregate roots; push rules into them; keep the domain pure.
 5. **Place each piece in the right layer** — rules in domain, orchestration in application, I/O in interfaces, technical detail in infrastructure.
-6. **Implement for the stack** — read the matching implementation reference and follow its idioms.
+6. **Implement for the stack** — follow the stack's implementation idioms; see the routing below.
+
+<!-- ddd:core:end -->
+
+## Strategic design — essentials
+
+Two more strategic decisions shape where the effort goes:
+
+- **Subdomains** — distinguish the **core** (your competitive advantage — invest most here), **supporting**, and **generic** (buy/reuse) subdomains, so effort goes where it matters.
+- **Context Mapping** — define the relationships between bounded contexts (e.g., an **Anti-Corruption Layer** to protect your model from an external one).
+
+## References
+
+- **Tactical patterns in depth** — the full catalog with detailed rules, trade-offs, and worked examples, including CQRS depth (read models, eventual consistency, relationship to event sourcing). Read `references/tactical-patterns.md`.
+- **Strategic concepts in depth** — read `references/strategic-design.md`.
+- **The modeling process and tools** — EventStorming, Domain Message Flow, the Bounded Context Canvas, the context-map pattern catalog, and the modeling recipe. Read `references/modeling-process.md`.
 
 ## Implementation references (by stack)
 
