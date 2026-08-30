@@ -1,9 +1,9 @@
 ---
 name: ddd-spring-boot
-description: Write Domain-Driven Design code in Spring Boot / Java: the four-layer package structure, aggregate roots as JPA entities, value objects and typed ids as embeddables, command and query services, repositories, domain events, anti-corruption layers, and the REST interface with resources and assemblers. Use when implementing or refactoring a Spring Boot service around business rules, structuring a new bounded context in Java, or pulling business logic out of controllers into a domain model. It carries the DDD design rules it depends on, so it works on its own. Not for Spring configuration, security, or framework questions unrelated to domain modeling.
+description: Write Domain-Driven Design code in Spring Boot / Java — the four-layer package structure, aggregate roots as JPA entities, value objects and typed ids as embeddables, command and query services, repositories, domain events, anti-corruption layers, and the REST interface with resources and assemblers. Use when implementing or refactoring a Spring Boot service around business rules, structuring a new bounded context in Java, or pulling business logic out of controllers into a domain model. It carries the DDD design rules it depends on, so it works on its own. Not for Spring configuration, security, or framework questions unrelated to domain modeling.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   author: Copyright 2026 Salim Ramirez
 ---
 

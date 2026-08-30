@@ -1,9 +1,9 @@
 ---
 name: ddd-angular
-description: Structure an Angular frontend with Domain-Driven Design: bounded-context feature folders, a domain layer of entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, and a presentation layer of views and components. Use when organizing or refactoring an Angular app by business domain rather than by technical type, isolating API contracts from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Angular framework how-to, or backend domain modeling.
+description: Structure an Angular frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, and a presentation layer of views and components. Use when organizing or refactoring an Angular app by business domain rather than by technical type, isolating API contracts from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Angular framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   author: Copyright 2026 Salim Ramirez
 ---
 
