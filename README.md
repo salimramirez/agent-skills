@@ -15,12 +15,22 @@ Teaches an agent to follow Domain-Driven Design correctly when modeling a domain
 
 The concepts are stack-agnostic, with implementation references for **Spring Boot / Java** and **Angular**.
 
+### `ddd-spring-boot` — DDD in Spring Boot / Java
+
+The implementation half for **Spring Boot / Java**, as a skill of its own: the four-layer package structure, the shared kernel, value objects and typed ids as embeddables, aggregate roots as JPA entities, command and query services, repositories, domain events, anti-corruption layers, the REST interface, and domain exceptions.
+
+It carries the DDD design rules it depends on, so it works without `ddd-playbook` installed. Reach for `ddd-playbook` alongside it when the work is modeling rather than coding.
+
 ## Installation
 
 Install a skill into your agent with the [`skills` CLI](https://github.com/vercel-labs/skills):
 
 ```bash
 npx skills add salimramirez/agent-skills --skill ddd-playbook
+```
+
+```bash
+npx skills add salimramirez/agent-skills --skill ddd-spring-boot
 ```
 
 ## License
