@@ -12,3 +12,6 @@ ehthumbs.db
 
 # Skill evaluation artifacts (generated)
 *-workspace/
+
+# Local-only reference material (never committed)
+.local/

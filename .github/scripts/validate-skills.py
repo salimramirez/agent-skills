@@ -7,6 +7,12 @@ For each skills/<name>/SKILL.md this checks:
   - frontmatter `name` matches the skill's directory name
   - SKILL.md and every Markdown file in the skill are <= 500 lines
 
+Skills in the DDD family (directory name starting with "ddd-") additionally
+carry a shared core block, delimited by the CORE_START/CORE_END markers below.
+The block is duplicated on purpose: there is no cross-skill dependency
+primitive, so a stack skill must be able to run on its own without losing the
+DDD design rules. This check keeps every copy byte-identical.
+
 Exits non-zero with a clear message listing every problem found.
 Run locally with: python3 .github/scripts/validate-skills.py
 """
@@ -14,6 +20,9 @@ import sys
 from pathlib import Path
 
 MAX_LINES = 500
+CORE_START = "<!-- ddd:core:start -->"
+CORE_END = "<!-- ddd:core:end -->"
+CORE_FAMILY_PREFIX = "ddd-"
 ROOT = Path(__file__).resolve().parents[2]
 SKILLS_DIR = ROOT / "skills"
 
@@ -37,8 +46,26 @@ def get_key(fm_lines, key):
     return None
 
 
+def core_block(text):
+    """Return the text between the core markers.
+
+    Returns None when no block is present, or the string "malformed" when the
+    markers are missing a partner, out of order, or repeated.
+    """
+    if CORE_START not in text and CORE_END not in text:
+        return None
+    if text.count(CORE_START) != 1 or text.count(CORE_END) != 1:
+        return "malformed"
+    start = text.index(CORE_START) + len(CORE_START)
+    end = text.index(CORE_END)
+    if end < start:
+        return "malformed"
+    return text[start:end].strip()
+
+
 def main():
     errors = []
+    cores = {}
 
     # A skill is a directory under skills/. Skip dotfiles and local-only
     # eval artifacts (skills/<name>-workspace/, gitignored) which aren't skills.
@@ -61,7 +88,24 @@ def main():
             errors.append(f"{skill.name}: missing SKILL.md")
             continue
 
-        fm = frontmatter(skill_md.read_text(encoding="utf-8"))
+        skill_text = skill_md.read_text(encoding="utf-8")
+
+        block = core_block(skill_text)
+        if block == "malformed":
+            errors.append(
+                f"{skill.name}/SKILL.md: core block markers are unbalanced, "
+                f"repeated, or out of order"
+            )
+        elif block is None:
+            if skill.name.startswith(CORE_FAMILY_PREFIX):
+                errors.append(
+                    f"{skill.name}/SKILL.md: missing the shared core block "
+                    f"({CORE_START} ... {CORE_END})"
+                )
+        else:
+            cores[skill.name] = block
+
+        fm = frontmatter(skill_text)
         if fm is None:
             errors.append(f"{skill.name}/SKILL.md: missing or unterminated '---' frontmatter")
         else:
@@ -82,13 +126,25 @@ def main():
             if count > MAX_LINES:
                 errors.append(f"{md.relative_to(ROOT)}: {count} lines exceeds {MAX_LINES}")
 
+    # Every core block in the collection must be byte-identical. ddd-playbook is
+    # the canonical copy when it is present; otherwise the first skill wins.
+    if len(set(cores.values())) > 1:
+        canonical_name = "ddd-playbook" if "ddd-playbook" in cores else sorted(cores)[0]
+        canonical = cores[canonical_name]
+        for name in sorted(cores):
+            if cores[name] != canonical:
+                errors.append(
+                    f"{name}/SKILL.md: core block differs from {canonical_name}/SKILL.md "
+                    f"(copy it across verbatim)"
+                )
+
     if errors:
         print("Skill validation failed:\n", file=sys.stderr)
         for e in errors:
             print(f"  - {e}", file=sys.stderr)
         return 1
 
-    print(f"All {len(skill_dirs)} skill(s) valid.")
+    print(f"All {len(skill_dirs)} skill(s) valid ({len(cores)} sharing the core block).")
     return 0
 
 
