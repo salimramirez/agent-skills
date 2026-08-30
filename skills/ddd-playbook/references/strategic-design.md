@@ -2,7 +2,7 @@
 
 Read this when doing the **strategic** part of DDD: shaping the ubiquitous language, discovering subdomains, and drawing and mapping bounded contexts. This is where the architecture of a domain gets decided — do it before tactical modeling.
 
-For the tactical building blocks (entities, value objects, aggregates, etc.) see `references/tactical-patterns.md`. For the layered architecture see the main `SKILL.md`. When implementing, see the stack reference (e.g., `references/spring-boot.md`).
+For the tactical building blocks (entities, value objects, aggregates, etc.) see `references/tactical-patterns.md`. For the layered architecture see the main `SKILL.md`. When implementing, use the matching implementation skill (`ddd-spring-boot`, `ddd-angular`).
 
 ## Contents
 

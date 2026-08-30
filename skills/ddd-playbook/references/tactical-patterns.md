@@ -2,7 +2,7 @@
 
 Read this when you are modeling *inside* a bounded context: choosing the building blocks that make up the domain model and the rules for combining them well. These are the tools that keep business logic in the model instead of leaking into controllers, services, or SQL — the cure for the **anemic domain model**.
 
-Do strategic design first (`references/strategic-design.md`); these patterns live inside the boundaries you found there. For how to express them in a specific stack, see the stack reference (e.g., `references/spring-boot.md`).
+Do strategic design first (`references/strategic-design.md`); these patterns live inside the boundaries you found there. For how to express them in a specific stack, use the matching implementation skill (`ddd-spring-boot`, `ddd-angular`).
 
 ## Contents
 

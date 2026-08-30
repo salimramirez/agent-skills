@@ -1,9 +1,9 @@
 ---
 name: ddd-playbook
-description: Apply Domain-Driven Design (DDD) when modeling a business domain or structuring code around business logic, on the backend or the frontend. Use whenever the user is designing or refactoring a domain model, pulling business rules out of controllers or UI components, organizing a backend service or an Angular app by domain or bounded context, or mentions DDD, bounded contexts, ubiquitous language, aggregates, entities, value objects, domain events, repositories, domain or application services, anti-corruption layers, or CQRS — even if they never say "DDD". It covers strategic design and collaborative modeling (context mapping, EventStorming), tactical patterns (aggregate boundaries, invariants, value objects), and idiomatic implementation in Spring Boot/Java or Angular. Prefer it over ad-hoc modeling whenever non-trivial business rules or invariants are involved. It does not apply to plain CRUD with no business rules, UI styling, DevOps or infrastructure, database query tuning, or framework API how-to questions.
+description: Model a business domain with Domain-Driven Design — bounded contexts, ubiquitous language, aggregates and their invariants, value objects, domain events, and context mapping. Use when designing or refactoring a domain model, deciding aggregate boundaries, splitting a system into bounded contexts, running or interpreting an EventStorming session, or when business rules are leaking into controllers, services, or UI components — even if the user never says "DDD". It covers the modeling and the design rules, not framework idioms; for writing the code, use the companion ddd-spring-boot or ddd-angular skills. Not for plain CRUD with no business rules, database tuning, or framework how-to questions.
 license: MIT
 metadata:
-  version: "1.0.1"
+  version: "2.0.0"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -83,11 +83,11 @@ Two more strategic decisions shape where the effort goes:
 - **Strategic concepts in depth** — read `references/strategic-design.md`.
 - **The modeling process and tools** — EventStorming, Domain Message Flow, the Bounded Context Canvas, the context-map pattern catalog, and the modeling recipe. Read `references/modeling-process.md`.
 
-## Implementation references (by stack)
+## Implementing the model
 
-The principles above are stack-agnostic, but the idioms (keeping persistence out of the domain, publishing domain events, etc.) differ. When writing code, read the file for the project's stack:
+The rules above are stack-agnostic, but the idioms that express them — keeping persistence out of the domain, publishing domain events, shaping the inbound adaptor — differ. When writing code, use the companion skill for the project's stack:
 
-- **Spring Boot / Java** → `references/spring-boot.md`
-- **Angular (frontend, DDD-adapted)** → `references/angular.md`
+- **Spring Boot / Java** → the `ddd-spring-boot` skill
+- **Angular (frontend, DDD-adapted)** → the `ddd-angular` skill
 
-If no reference exists for the project's stack, apply the rules above idiomatically for that technology.
+Each of them carries the same core design rules as this file, so it stands on its own; reach for this skill alongside them when the work is modeling rather than coding. If no companion skill matches the project's stack, apply the rules above idiomatically for that technology.
