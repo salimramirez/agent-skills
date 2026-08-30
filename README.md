@@ -4,28 +4,29 @@ A collection of [Agent Skills](https://agentskills.io) — portable, model-agnos
 
 ## Skills
 
-### `ddd-playbook` — Domain-Driven Design
+Three skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
 
-Teaches an agent to follow Domain-Driven Design correctly when modeling a domain or writing backend code — so you don't have to re-explain DDD each time. It uses progressive disclosure: a lean core with the decision rules, plus reference files loaded on demand.
+They share a core block of DDD design rules, duplicated on purpose so that **every one of them works on its own**. Install only the stack skill you need, or the playbook alongside it when the work is modeling rather than coding.
+
+### `ddd-playbook` — modeling a domain
+
+The design rules and the modeling work, stack-agnostic.
 
 - **Strategic design** — ubiquitous language, subdomains, bounded contexts, context mapping, domain storytelling.
 - **Modeling process** — EventStorming, Domain Message Flow Modelling, the Bounded Context Canvas, the context-map pattern catalog.
 - **Tactical patterns** — entities, value objects, aggregates (with aggregate-boundary design), domain events, domain services, repositories, factories, and CQRS.
-- **Implementation** — idiomatic DDD per stack: **Spring Boot / Java** (four-layer architecture, command/query services, repositories, domain events, anti-corruption layers, the shared kernel, domain exceptions) and **Angular** (DDD-adapted for the frontend: bounded-context feature folders, the shared kernel, signal stores, repository-as-endpoint, assemblers as anti-corruption layer).
 
-The concepts are stack-agnostic, with implementation references for **Spring Boot / Java** and **Angular**.
+### `ddd-spring-boot` — writing it in Spring Boot / Java
 
-### `ddd-spring-boot` — DDD in Spring Boot / Java
+The four-layer package structure, the shared kernel, value objects and typed ids as JPA embeddables, aggregate roots as JPA entities with real behavior, commands and queries as records with their command and query services, repositories, domain events, anti-corruption layers, the REST interface with resources and assemblers, and domain exceptions.
 
-The implementation half for **Spring Boot / Java**, as a skill of its own: the four-layer package structure, the shared kernel, value objects and typed ids as embeddables, aggregate roots as JPA entities, command and query services, repositories, domain events, anti-corruption layers, the REST interface, and domain exceptions.
+Works on Spring Boot 3 and 4 with Java 17+.
 
-It carries the DDD design rules it depends on, so it works without `ddd-playbook` installed. Reach for `ddd-playbook` alongside it when the work is modeling rather than coding.
+### `ddd-angular` — writing it in Angular
 
-### `ddd-angular` — DDD in Angular
+Bounded contexts as feature folders with four layers inside each, the shared kernel, entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, views and components, per-context lazy routing, and reactive forms.
 
-The implementation half for the **Angular** frontend: bounded contexts as feature folders, the shared kernel, entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, views and components, per-context routing, and reactive forms.
-
-It is honest about what DDD means on a client: the backend owns the invariants, so this is DDD-inspired organization, not a second place to enforce business rules. Like the Spring Boot skill, it carries the design rules it depends on and works on its own.
+It is honest about what DDD means on a client: the backend is the system of record and owns the invariants, so this is DDD-inspired organization rather than a second place to enforce business rules. Idioms follow the Angular 20+ style and apply unchanged on 21 and 22.
 
 ## Installation
 
@@ -42,6 +43,12 @@ npx skills add salimramirez/agent-skills --skill ddd-spring-boot
 ```bash
 npx skills add salimramirez/agent-skills --skill ddd-angular
 ```
+
+## Versioning
+
+Each skill is versioned and tagged independently, as `<skill>-vX.Y.Z`. The release notes for a tag are that skill's changelog.
+
+> **Upgrading from `ddd-playbook` 1.x?** The Spring Boot and Angular implementation references no longer ship inside `ddd-playbook`. They are now the `ddd-spring-boot` and `ddd-angular` skills — install the one you need alongside it.
 
 ## License
 
