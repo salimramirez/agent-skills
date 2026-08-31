@@ -20,12 +20,12 @@ The rule: **document classes, interfaces, and public methods; use `@param` and `
  */
 export class Order implements BaseEntity {
   /**
-   * Adds an item to the order.
+   * Adds a line to the order.
    *
-   * @param item - Item to add, already priced by the catalog.
+   * @param line - Line to add, already priced by the catalog.
    * @returns The order, so calls can be chained while building one.
    */
-  addItem(item: OrderItem): Order { /* … */ }
+  addLine(line: OrderLine): Order { /* … */ }
 }
 ```
 
@@ -45,7 +45,7 @@ Pair each writable signal with its read-only view immediately, not in a separate
 
 ## Prefer `inject()`
 
-Use `inject()` for dependencies rather than constructor parameters — in components, views, stores, guards, and interceptors alike. A constructor is then free to do actual work, such as an eager load or reading a route parameter. The one place a constructor parameter still earns its keep is a plain class instantiated by hand (an endpoint built inside a context API), which is not part of the injector.
+Use `inject()` for dependencies rather than constructor parameters — in components, views, stores, guards, and interceptors alike. A constructor is then free to do actual work, such as an eager load or reading a route parameter. The exception is a dependency you need **in order to build something else** in the constructor: a context API declares `constructor(http: HttpClient)` because it forwards `http` into the endpoints it constructs, and those endpoints are plain classes outside the injector entirely. Everywhere else, `inject()`.
 
 ## Keep the layers honest
 

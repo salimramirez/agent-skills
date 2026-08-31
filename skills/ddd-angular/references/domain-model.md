@@ -10,6 +10,12 @@ import {BaseEntity} from '../../../shared/domain/model/base-entity';
 
 export type OrderStatus = 'PLACED' | 'CONFIRMED' | 'ON_THE_WAY' | 'DELIVERED' | 'CANCELLED';
 
+/** One line of an order: what was ordered, and how many. */
+export interface OrderLine {
+  menuItemId: number;
+  quantity: number;
+}
+
 /**
  * An order a customer placed in the ordering context.
  *
@@ -115,8 +121,6 @@ export class PlaceOrderCommand {
 
   get customerId(): number { return this._customerId; }
   get lines(): OrderLine[] { return this._lines; }
-  get deliveryAddress(): string { return this._deliveryAddress; }
-  set deliveryAddress(value: string) { this._deliveryAddress = value; }
   get deliveryAddress(): string { return this._deliveryAddress; }
 }
 ```

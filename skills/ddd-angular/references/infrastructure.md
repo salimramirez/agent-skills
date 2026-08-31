@@ -123,11 +123,13 @@ One per bounded context, extending `BaseApi`. It owns the context's endpoints an
 @Injectable({providedIn: 'root'})
 export class OrderingApi extends BaseApi {
   private readonly ordersEndpoint: OrdersApiEndpoint;
+  private readonly couriersEndpoint: CouriersApiEndpoint;
   private readonly menuItemsEndpoint: MenuItemsApiEndpoint;
 
   constructor(http: HttpClient) {
     super();
     this.ordersEndpoint = new OrdersApiEndpoint(http);
+    this.couriersEndpoint = new CouriersApiEndpoint(http);
     this.menuItemsEndpoint = new MenuItemsApiEndpoint(http);
   }
 
@@ -146,11 +148,18 @@ export class OrderingApi extends BaseApi {
 
   deleteOrder(id: number): Observable<void> { return this.ordersEndpoint.delete(id); }
 
-  getMenuItems(): Observable<MenuItem[]> { return this.menuItemsEndpoint.getAll(); }
+  /**
+   * @returns The couriers the store resolves each order against.
+   */
+  getCouriers(): Observable<Courier[]> { return this.couriersEndpoint.getAll(); }
+
+  getMenuItems(sectionId: string): Observable<MenuItem[]> {
+    return this.menuItemsEndpoint.getAll(sectionId);
+  }
 }
 ```
 
-The store depends on `OrderingApi` and nothing else in this layer. A context with three aggregates has three endpoint fields here and one store talking to all of them.
+The store depends on `OrderingApi` and nothing else in this layer. A context with three aggregates has three endpoint fields here and one store talking to all of them — `Courier` and `MenuItem` each get the same four files `Order` did.
 
 ## The round trip
 

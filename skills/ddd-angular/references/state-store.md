@@ -91,8 +91,18 @@ export class OrderingStore {
     });
   }
 
-  // updateOrder and deleteOrder have the same shape: set loading, clear error,
-  // call the API, update the signal, clear loading.
+  // updateOrder, deleteOrder and cancelOrder have the same shape: set loading,
+  // clear error, call the API, update the signal, clear loading.
+
+  /**
+   * Loads the couriers this context resolves orders against.
+   */
+  private loadCouriers(): void {
+    this.orderingApi.getCouriers().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: couriers => this.couriersSignal.set(couriers),
+      error: error => this.errorSignal.set(this.formatError(error, 'Failed to load couriers'))
+    });
+  }
 
   private assignCouriersToOrders(): void {
     this.ordersSignal.update(orders => orders.map(order => this.assignCourierToOrder(order)));
@@ -143,6 +153,7 @@ Some data is read-only and expensive: a menu per restaurant, a provider's refere
 
 ```typescript
 private readonly menuBySectionSignal = signal<Record<string, MenuItem[]>>({});
+private readonly currentSectionSignal = signal<string>('');
 
 loadMenuForSection(sectionId: string): void {
   if (this.menuBySectionSignal()[sectionId]) return;              // already have it
@@ -162,6 +173,8 @@ The store, not the view, decides what has already been fetched.
 A command-shaped use case looks the same from the outside; the store passes the command to the context API and reacts to the resource that comes back:
 
 ```typescript
+private readonly lastPlacedOrderIdSignal = signal<number | null>(null);
+
 placeOrder(command: PlaceOrderCommand): void {
   this.loadingSignal.set(true);
   this.errorSignal.set(null);
