@@ -4,7 +4,7 @@ A collection of [Agent Skills](https://agentskills.io) — portable, model-agnos
 
 ## Skills
 
-Four skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
+Five skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
 
 They share a core block of DDD design rules, duplicated on purpose so that **every one of them works on its own**. Install only the stack skill you need, or the playbook alongside it when the work is modeling rather than coding.
 
@@ -38,6 +38,14 @@ Written in **JavaScript with JSDoc**, because that is what the convention uses �
 
 It is honest about what DDD means on a client: the backend is the system of record and owns the invariants, so this is DDD-inspired organization rather than a second place to enforce business rules. Vue 3 with `<script setup>`, Pinia, Vue Router and axios.
 
+### `ddd-react` — writing it in React
+
+Bounded contexts as feature folders with four layers inside each, a two-class shared kernel over axios, immutable entity and command classes that carry behaviour, assemblers as an anti-corruption layer, Zustand stores, routed views and reusable components, path builders per context, and route protection placed in the context that owns the rule.
+
+**React with TypeScript, React Router, Zustand and axios**, for a client-rendered SPA. Like its siblings it ships code: `assets/shared-kernel/` holds the two base classes to copy as they are, and `scripts/new-context.py` scaffolds a whole bounded context. A `javascript.md` reference covers what changes without a compiler — including the runtime schema check that has to replace the prop validation React 19 removed.
+
+Unlike `ddd-angular` and `ddd-vue`, which mirror real codebases, this one **derives** the same four-layer model onto React and says so. Every framework-specific claim in it was checked by building and running a real app: that mutating an entity renders nothing while replacing it works, that a loader returning `redirect()` protects a route, and that a raw resource passed where an entity belongs fails to compile precisely because the entity has behaviour.
+
 ## Installation
 
 Install a skill into your agent with the [`skills` CLI](https://github.com/vercel-labs/skills):
@@ -56,6 +64,10 @@ npx skills add salimramirez/agent-skills --skill ddd-angular
 
 ```bash
 npx skills add salimramirez/agent-skills --skill ddd-vue
+```
+
+```bash
+npx skills add salimramirez/agent-skills --skill ddd-react
 ```
 
 ## Versioning
