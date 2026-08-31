@@ -4,7 +4,7 @@ A collection of [Agent Skills](https://agentskills.io) — portable, model-agnos
 
 ## Skills
 
-Three skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
+Four skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
 
 They share a core block of DDD design rules, duplicated on purpose so that **every one of them works on its own**. Install only the stack skill you need, or the playbook alongside it when the work is modeling rather than coding.
 
@@ -30,6 +30,14 @@ It is deliberately **opinionated**: for every decision it names one convention �
 
 It is honest about what DDD means on a client: the backend is the system of record and owns the invariants, so this is DDD-inspired organization rather than a second place to enforce business rules. The idioms are standalone components, signals, and `inject()`, and they hold across current Angular versions.
 
+### `ddd-vue` — writing it in Vue
+
+Bounded contexts as feature folders with four layers inside each, a two-class shared kernel over axios, entity and command classes that carry behaviour, assemblers as an anti-corruption layer, Pinia stores, views and components, named lazy routes per context, and cross-cutting concerns placed in the context that owns the rule.
+
+Written in **JavaScript with JSDoc**, because that is what the convention uses — and with no compiler in the picture, the JSDoc block is where the shape of every class and store is written down. Like `ddd-angular` it ships code: `assets/shared-kernel/` holds the two base classes to copy as they are, and `scripts/new-context.py` scaffolds a whole bounded context from a context and an entity name.
+
+It is honest about what DDD means on a client: the backend is the system of record and owns the invariants, so this is DDD-inspired organization rather than a second place to enforce business rules. Vue 3 with `<script setup>`, Pinia, Vue Router and axios.
+
 ## Installation
 
 Install a skill into your agent with the [`skills` CLI](https://github.com/vercel-labs/skills):
@@ -44,6 +52,10 @@ npx skills add salimramirez/agent-skills --skill ddd-spring-boot
 
 ```bash
 npx skills add salimramirez/agent-skills --skill ddd-angular
+```
+
+```bash
+npx skills add salimramirez/agent-skills --skill ddd-vue
 ```
 
 ## Versioning

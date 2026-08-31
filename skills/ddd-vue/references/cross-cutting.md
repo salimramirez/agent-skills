@@ -1,0 +1,132 @@
+# Cross-cutting concerns
+
+Guards, interceptors, localization, and app bootstrap — where they go and why.
+
+None of this is domain modeling, and that is exactly why it needs a rule: left alone, cross-cutting code drifts into `shared/` and then into stores and templates. What follows is the arrangement these conventions use. It is a recommendation, not a requirement.
+
+## A guard belongs to the context that owns the rule
+
+An authentication guard is not generic plumbing: it enforces a rule belonging to a specific context, and it reads that context's store. So it lives in **that context's `infrastructure/` folder**, not in `shared/`.
+
+```javascript
+// identity/infrastructure/authentication.guard.js
+import useIdentityStore from '../application/identity.store.js';
+
+/**
+ * Keeps unauthenticated visitors out of the routes that require an account.
+ *
+ * @param {import('vue-router').RouteLocationNormalized} to - Target route.
+ * @returns {boolean | {name: string}} True to allow, or a route to redirect to.
+ */
+export const authenticationGuard = (to) => {
+    const store = useIdentityStore();
+    const publicRouteNames = ['identity-sign-in', 'identity-sign-up', 'about', 'not-found'];
+    if (store.isSignedIn || publicRouteNames.includes(to.name)) return true;
+    return {name: 'identity-sign-in'};
+};
+```
+
+Match on **route names, not paths**. A path list breaks the moment someone renames a segment, and it breaks silently — by locking users out or, worse, by letting them in.
+
+The root router applies it, which is the only place other contexts touch it — by name, not by reaching into `identity`:
+
+```javascript
+// router.js
+router.beforeEach((to) => {
+    document.title = `QuickBite - ${to.meta.title ?? ''}`;
+    return authenticationGuard(to);
+});
+```
+
+The same reasoning covers any guard whose decision comes from a domain rule: an `ordering.guard.js` that blocks checkout on an empty cart belongs to `ordering`.
+
+## An interceptor belongs to the context that owns the credential
+
+The token is `identity`'s state, so the interceptor that attaches it sits beside the guard:
+
+```javascript
+// identity/infrastructure/identity.interceptor.js
+import useIdentityStore from '../application/identity.store.js';
+
+/**
+ * Attaches the bearer token to outgoing requests when a user is signed in.
+ *
+ * @param {import('axios').InternalAxiosRequestConfig} config - Request configuration.
+ * @returns {import('axios').InternalAxiosRequestConfig} The configuration to send.
+ */
+export const identityInterceptor = (config) => {
+    const store = useIdentityStore();
+    if (store.isSignedIn) config.headers.Authorization = `Bearer ${store.currentToken}`;
+    return config;
+};
+```
+
+**Pass it in; do not import it from the kernel.** `BaseApi` takes interceptors as a constructor option precisely so `shared/` never imports from a bounded context:
+
+```javascript
+// ordering/infrastructure/ordering-api.js
+import {identityInterceptor} from '../../identity/infrastructure/identity.interceptor.js';
+
+export class OrderingApi extends BaseApi {
+    constructor() {
+        super({requestInterceptors: [identityInterceptor]});
+        // …
+    }
+}
+```
+
+It is tempting to import the interceptor inside `base-api.js` so every gateway gets it for free. That inverts the dependency rule — the shared kernel would depend on `identity`, and a project without an identity context could no longer use the kernel. One line per gateway is the price of keeping the arrow pointing the right way.
+
+Because a store is read inside the interceptor, Pinia must be active by the time a request goes out. Constructing gateways at module scope in a store file (see `state-store.md`) is still fine — but not for the reason it looks like. ES modules evaluate **eagerly**, the moment they are imported, so that `new OrderingApi()` really does run before `app.use(pinia)`. It is safe because building an Axios client touches no store; the interceptor is a function that only *runs* when a request is sent, from inside an action, long after Pinia is installed.
+
+If a token must survive a reload, the **store** reads and writes it (`localStorage`, or a cookie), so persistence stays a decision of the application layer rather than of the interceptor.
+
+## Localization and component libraries
+
+A UI kit and a translation composable are real dependencies of a real app, and they belong in the **presentation layer only**. The test is simple:
+
+- A **view or component** may use `useI18n()` and the library's components freely.
+- A **store, an entity, a command, an assembler, or a gateway** may not import either. An error a store publishes is a message key or a plain sentence; the template decides how it is rendered and in what language.
+
+A language switcher is app-wide UI, so it lives in `shared/presentation/components/` next to the layout. Translation files sit outside the context folders entirely — they are assets, not code.
+
+## App bootstrap
+
+Three small modules, each with one job, and `main.js` composing them:
+
+```javascript
+// pinia.js
+import {createPinia} from 'pinia';
+
+/** @type {import('pinia').Pinia} Shared Pinia instance for every context store. */
+const pinia = createPinia();
+export default pinia;
+```
+
+```javascript
+// main.js
+import {createApp} from 'vue';
+import App from './app.vue';
+import router from './router.js';
+import pinia from './pinia.js';
+import i18n from './i18n.js';
+import './style.css';
+
+createApp(App)
+    .use(pinia)
+    .use(router)
+    .use(i18n)
+    .mount('#app');
+```
+
+The order of these `use` calls does not actually matter — the first navigation happens at `mount()`, by which point every plugin is installed, so a guard that resolves a store works either way. Listing Pinia first is convention, not a constraint.
+
+What genuinely breaks is **resolving a store at module scope**:
+
+```javascript
+const store = useOrderingStore();   // runs on import, before app.use(pinia)
+```
+
+There is no active Pinia yet, and the app dies on load with `Cannot read properties of undefined (reading '_s')` — a message naming neither Pinia nor your store — leaving a blank page. Call `useStore()` inside a component's `setup`, a guard, or an action, never at the top level of a module. Constructing a *gateway* at module scope is fine (see `state-store.md`); it is the store resolution that needs an active Pinia.
+
+Keep `main.js` to wiring. Nothing domain-specific belongs here: stores and gateways are reached through their own modules, so a context appearing in this file usually means someone worked around a circular import instead of fixing it.
