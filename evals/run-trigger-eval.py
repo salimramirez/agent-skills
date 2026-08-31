@@ -120,6 +120,9 @@ def main():
     parser.add_argument("--expect", default=None,
                         help="skill a should_trigger query should reach; omit when the eval set "
                              "names an expected skill per case")
+    parser.add_argument("--watch", default=None,
+                        help="comma-separated skills a negative case must NOT reach; defaults to "
+                             "the skills named by the set's own positive cases")
     parser.add_argument("--runs", type=int, default=2, help="runs per query (default 2)")
     parser.add_argument("--workers", type=int, default=8, help="parallel workers (default 8)")
     parser.add_argument("--timeout", type=int, default=180, help="seconds per run (default 180)")
@@ -163,6 +166,13 @@ def main():
 
     passed_positive = passed_negative = 0
     groups = sorted({expected(c) for c in cases if expected(c)}) if per_case else [args.expect]
+
+    # What a negative case must not reach. Without this, a set made only of negatives
+    # would compare them against an empty list and pass every one of them vacuously.
+    watched = ([s.strip() for s in args.watch.split(",")] if args.watch else groups)
+    if not watched:
+        raise SystemExit("every case in this set is a negative, so there is nothing to watch for. "
+                         "Pass --watch with the skills that must not claim them.")
     for wanted in groups + [None]:
         print(f"=== {'should reach ' + wanted if wanted else 'should reach none of them'} ===")
         for index, case in enumerate(cases):
@@ -174,7 +184,6 @@ def main():
                 good = hits >= len(results) / 2
                 passed_positive += good
             else:
-                watched = groups if per_case else [args.expect]
                 hits = sum(1 for r in results if r in watched)
                 good = hits < len(results) / 2
                 passed_negative += good
