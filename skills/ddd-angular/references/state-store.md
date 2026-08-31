@@ -139,7 +139,7 @@ Keep it here rather than in a view — that is the whole reason the application 
 
 ## Caching what should not be refetched
 
-Some data is read-only and expensive: a catalog, a provider's reference list, articles for a source. Key it and only fetch on a miss:
+Some data is read-only and expensive: a menu per restaurant, a provider's reference list, anything fetched per selection. Key it and only fetch on a miss:
 
 ```typescript
 private readonly menuBySectionSignal = signal<Record<string, MenuItem[]>>({});
