@@ -23,7 +23,7 @@ Never `any`. Where a shape is genuinely unknown, `unknown` plus a narrowing at t
 
 ## Prefer `type` imports
 
-`import type {Order} from …` for anything used only as a type. It tells the reader the import carries no runtime cost, and with `verbatimModuleSyntax` — on by default in Vite's template — mixing them up is a compile error.
+`import type {OrderResource} from …` for anything that exists only as a type — an interface, a type alias. With `verbatimModuleSyntax`, on by default in Vite's template, importing one *without* the modifier is `TS1484: 'OrderResource' is a type and must be imported using a type-only import`. A class is a value as well as a type, so `import {Order}` stays correct; the modifier is for the shapes that vanish at runtime.
 
 ## Order members predictably
 

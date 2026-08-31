@@ -99,7 +99,7 @@ interface ImportMeta {
 }
 ```
 
-That file is what turns a typo in an env key into a compile error instead of an `undefined` baseURL, which axios sends as a **relative** request against your own origin — returning `index.html` rather than anything that names the missing key.
+What that buys is autocomplete and a real `string` type for the keys you declared. It does **not** catch a typo: Vite's `ImportMetaEnv` carries an index signature, so `import.meta.env.VITE_ORDRS_ENDPOINT_PATH` compiles happily and arrives `undefined` — which axios then sends as a **relative** request against your own origin, returning `index.html` rather than anything that names the missing key. Declaring the keys is worth doing; keeping the two `.env` files in step is what actually prevents the bug.
 
 Both env files declare the **same keys**; only the values differ.
 

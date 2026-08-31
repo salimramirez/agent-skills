@@ -116,6 +116,7 @@ Reach for a **command** when the input is not "save this entity": placing an ord
 
 ```typescript
 // ordering/domain/model/place-order.command.ts
+import type {OrderLine} from './order-line';
 
 /**
  * Intent to place an order for the items currently in a cart.
