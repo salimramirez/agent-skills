@@ -3,15 +3,17 @@ name: ddd-angular
 description: Structure an Angular frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, and a presentation layer of views and components. Use when organizing or refactoring an Angular app by business domain rather than by technical type, isolating API contracts from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Angular framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
   author: Copyright 2026 Salim Ramirez
 ---
 
 # DDD in Angular
 
-Structure an **Angular** app around a domain. Start with the honest part below — DDD on the frontend is *adapted*, not the same as on the backend — and then apply the structure and idioms in the references. Examples use the **QuickBite** food-delivery domain (an `ordering` feature). Idioms follow the Angular 20+ style (standalone components, signals, `inject()`) and apply unchanged on Angular 21 and 22.
+Structure an **Angular** app around a domain. Start with the honest part below — DDD on the frontend is *adapted*, not the same as on the backend — then apply the structure and the idioms in the references.
 
-> **Angular 22 note.** Everything here stays supported; v22 only *adds* modern alternatives you can opt into without changing this structure: **`@Service()`** as a shorter form of `@Injectable({ providedIn: 'root' })` (root-provided, `inject()`-only) for stores and context APIs; **Signal Forms** alongside the reactive forms shown here; and **`resource()` / `httpResource()`** as a signal-native data-fetching option in place of the manual `subscribe` in the store. Signals also pair naturally with OnPush — the default change detection from v22.
+This is an **opinionated** house style: for every decision it names one convention and says what that convention buys, rather than listing options. It is one coherent way to do this, not the only correct one; where a choice is genuinely open, the reference says so. Examples use the **QuickBite** food-delivery domain, in an `ordering` bounded context.
+
+The idioms are standalone components, signals, and `inject()`. They work unchanged across current Angular versions; newer releases add alternatives — a signal-based forms API, signal-native data fetching, shorter service decorators — that you can adopt without changing anything about the structure here.
 
 ## What DDD means on the frontend
 
@@ -79,34 +81,68 @@ Command Query Responsibility Segregation separates the model that **changes** st
 ## What carries over, loosens, or doesn't apply
 
 - **Carries over:** the ubiquitous language; bounded contexts; the four-layer split with an isolated domain; anti-corruption via assemblers; keeping logic out of the UI.
-- **Loosens:** repositories are API endpoints rather than aggregate stores; aggregates and value objects are lighter or skipped (the UI rarely needs them); "domain events" are usually signal/observable updates.
+- **Loosens:** repositories are API endpoints rather than aggregate stores; aggregates and value objects are lighter or skipped (the UI rarely needs them); "domain events" are usually signal updates.
 - **Doesn't apply:** authoritative invariants and transactional consistency — those belong to the backend. Client-side checks are UX, and the server validates again.
+
+## The house style in one screen
+
+The rules this skill applies by default. Each one is expanded, with its reason, in the reference that owns it.
+
+- **A bounded context is a feature folder** under `src/app/`, with `domain/`, `application/`, `infrastructure/`, and `presentation/` inside it. `shared/` is the kernel and stays small.
+- **One store per context**, named after the context (`OrderingStore`), not per entity and not one for the app.
+- **The store is the only thing that calls the context API**; only an endpoint touches `HttpClient`. A view calls its store, and that is the whole chain.
+- **Entities are classes** in `*.entity.ts` — private fields, accessors, one options-object constructor, `implements BaseEntity`. A setter exists only where the UI genuinely changes the value.
+- **Other aggregates are referenced by id.** A resolved object is stitched in by the store, and the id stays the source of truth.
+- **The resource never leaves `infrastructure/`.** Assemblers are the anti-corruption layer; a snake_case field in a template means one was skipped.
+- **CRUD writes send the entity; everything else sends a command.** A command is a class with no id, and it travels through its own request DTO.
+- **State is private signals published read-only**, with `computed()` for anything derived. Reads use `takeUntilDestroyed`, writes use `retry(2)`, and every call sets `loading` and clears it in both branches.
+- **Views are smart and routed; components are dumb and reusable** — `input()` in, `output()` out, and a dumb component never sees the store.
+- **Every context owns its routes** and lazy-loads its views; the root router mounts contexts with `loadChildren`.
+- **URLs are composed from `environment`**, one base URL per provider plus one path per endpoint — never a literal in an endpoint.
+- **Classes, interfaces, and public methods carry JSDoc.** The domain layer is where the ubiquitous language gets written down.
 
 ## Implementation references
 
 Read the file that matches the task at hand.
 
-**Laying out the app**
+**Starting a piece of work**
 
-- **Folder structure** — bounded contexts as feature folders, and the four layers inside each. Read [structure.md](references/structure.md)
-- **The shared kernel** — the base classes and app-wide pieces every context reuses. Read [shared-kernel.md](references/shared-kernel.md)
+- **Adding a resource end to end** — the nine files in order, plus the checklist to finish on. Start here for "add X to the app". Read [adding-a-resource.md](references/adding-a-resource.md)
+- **Folder structure, naming, and environment** — contexts and layers, the file-to-class naming table, and where URLs come from. Read [structure.md](references/structure.md)
+- **House style** — the JSDoc rule, member ordering, and the layer smells to avoid. Read [house-style.md](references/house-style.md)
+- **The shared kernel** — the seven base classes every context builds on. Read [shared-kernel.md](references/shared-kernel.md)
 
 **Modeling the domain**
 
-- **Entities and commands** — entities as classes with private fields and accessors; commands for non-CRUD intents. Read [domain-model.md](references/domain-model.md)
+- **Entities and commands** — entities as classes with accessors, value objects, and commands for non-CRUD intents. Read [domain-model.md](references/domain-model.md)
 
 **Talking to the backend**
 
-- **DTOs, assemblers, endpoints, and the context API** — the API boundary, with assemblers as the anti-corruption layer. Read [infrastructure.md](references/infrastructure.md)
+- **The CRUD path** — DTOs, assemblers, endpoints, and the context API. Read [infrastructure.md](references/infrastructure.md)
+- **Commands and actions** — the non-CRUD path, and integrating an API that is not yours. Read [commands-and-actions.md](references/commands-and-actions.md)
 
 **Holding state**
 
-- **The signal store** — per-operation loading and error state, and how a store talks to its context API. Read [state-store.md](references/state-store.md)
+- **The signal store** — signals and computed queries, loading and error handling, stitching, and caching. Read [state-store.md](references/state-store.md)
 
 **Building the UI**
 
-- **Views, components, and routing** — routed smart views, reusable dumb components, and per-context lazy routes. Read [presentation.md](references/presentation.md)
-- **Reactive forms and writes** — building an entity from a form for CRUD, and the command path for everything else. Read [forms.md](references/forms.md)
+- **Views, components, and routing** — the smart/dumb split, per-context lazy routes, and the app shell. Read [presentation.md](references/presentation.md)
+- **Reactive forms and writes** — one view for create and edit, validation as UX, entity or command. Read [forms.md](references/forms.md)
+- **Cross-cutting concerns** — guards and interceptors in the context that owns the rule, localization, and app bootstrap. Read [cross-cutting.md](references/cross-cutting.md)
+
+## Copy instead of retyping
+
+Two things ship as code, because they should come out the same every time:
+
+- **`assets/shared-kernel/`** — the seven base files (`base-entity`, `base-response`, `base-assembler`, `error-handling-enabled-base-type`, `base-api-endpoint`, `base-api`, `base-form`). Copy them into `src/app/shared/` as they are; do not paraphrase them from the docs.
+- **`scripts/new-context.py`** — scaffolds a whole bounded context wired for one CRUD aggregate, deriving every spelling of the name from two arguments:
+
+  ```bash
+  python3 scripts/new-context.py --context ordering --entity Order --into src/app
+  ```
+
+  Add `--dry-run` to see what it would write, `--plural People` when the naive plural is wrong. It prints the two edits it cannot make for you: the `environment` keys and the route in `app.routes.ts`. What it writes is ordinary code — read it, then model the real aggregate.
 
 For Angular questions the references do not cover, read the documentation at `https://angular.dev`.
 

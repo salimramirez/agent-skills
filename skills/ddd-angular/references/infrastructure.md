@@ -1,92 +1,163 @@
-# Infrastructure: DTOs, assemblers, endpoints, and the context API
+# Infrastructure: the CRUD path
 
-The API boundary: wire-shaped DTOs, assemblers as the anti-corruption layer, endpoints, and the context API facade.
+DTOs, assemblers, endpoints, and the context API — the read/write path for a record.
 
-The infrastructure layer rests on the shared base classes from the kernel: `BaseResource`/`BaseResponse` (DTO markers), `BaseAssembler<Entity, Resource, Response>` (the mapping contract), the generic `BaseApiEndpoint<Entity, Resource, Response, Assembler>` that implements CRUD — `getAll`, `getById`, `create`, `update`, `delete` — with error handling, and `BaseApi` for a context's API facade.
+Four files carry one aggregate from the wire to the domain and back. They rest on the kernel's base classes (`shared-kernel.md`), and each has exactly one job.
 
-**The DTOs** live in `*-response.ts`: a `Resource` (one item, extends `BaseResource`) and a `Response` (the envelope, extends `BaseResponse`). They mirror the API's wire shape and never leave this layer:
+## 1. The DTOs — `orders-response.ts`
+
+One file per collection, holding **both** wire shapes: the item and the envelope. They mirror the API exactly, quirks included, and never leave this layer.
 
 ```typescript
 // ordering/infrastructure/orders-response.ts
-import { BaseResource, BaseResponse } from '../../shared/infrastructure/base-response';
+import {BaseResource, BaseResponse} from '../../shared/infrastructure/base-response';
 
+/**
+ * Wire shape of a single order as the platform API returns it.
+ */
 export interface OrderResource extends BaseResource {
   id: number;
   customer_id: number;
-  items: { item_id: number; quantity: number }[];
-  status: OrderStatus;
+  lines: {menu_item_id: number, quantity: number}[];
+  delivery_address: string;
+  status: string;
   total: number;
+  courier_id: number | null;
 }
 
+/**
+ * Wire shape of the envelope holding many orders.
+ */
 export interface OrdersResponse extends BaseResponse {
   orders: OrderResource[];
 }
 ```
 
-**The assembler** `implements BaseAssembler` and maps both ways — building entities with `new`, and turning an entity back into a resource for writes:
+Snake case, a `status` typed as `string` rather than the union, a nullable field where the domain wants a default — leave all of it as the API actually sends it. Cleaning it up here would move the translation to the wrong place.
+
+## 2. The assembler — `order-assembler.ts`
+
+The anti-corruption layer. It is the only file that knows both shapes, and it maps both directions.
 
 ```typescript
 // ordering/infrastructure/order-assembler.ts
-import { BaseAssembler } from '../../shared/infrastructure/base-assembler';
+import {BaseAssembler} from '../../shared/infrastructure/base-assembler';
+import {Order, OrderStatus} from '../domain/model/order.entity';
+import {OrderResource, OrdersResponse} from './orders-response';
 
+/**
+ * Anti-corruption layer between the orders API and the ordering model.
+ */
 export class OrderAssembler implements BaseAssembler<Order, OrderResource, OrdersResponse> {
+  toEntitiesFromResponse(response: OrdersResponse): Order[] {
+    return response.orders.map(resource => this.toEntityFromResource(resource));
+  }
+
   toEntityFromResource(resource: OrderResource): Order {
     return new Order({
       id: resource.id,
-      customerId: resource.customer_id,                                  // translate the API's naming
-      items: resource.items.map(i => ({ itemId: i.item_id, quantity: i.quantity })),
-      status: resource.status,
+      customerId: resource.customer_id,                       // the API's naming stops here
+      lines: resource.lines.map(line => ({
+        menuItemId: line.menu_item_id, quantity: line.quantity
+      })),
+      deliveryAddress: resource.delivery_address,
+      status: resource.status as OrderStatus,
       total: resource.total,
+      courierId: resource.courier_id ?? 0                     // the API's null becomes a domain default
     });
-  }
-
-  toEntitiesFromResponse(response: OrdersResponse): Order[] {
-    return response.orders.map(resource => this.toEntityFromResource(resource));
   }
 
   toResourceFromEntity(entity: Order): OrderResource {
     return {
       id: entity.id,
       customer_id: entity.customerId,
-      items: entity.items.map(i => ({ item_id: i.itemId, quantity: i.quantity })),
+      lines: entity.lines.map(line => ({
+        menu_item_id: line.menuItemId, quantity: line.quantity
+      })),
+      delivery_address: entity.deliveryAddress,
       status: entity.status,
       total: entity.total,
+      courier_id: entity.courierId || null
     } as OrderResource;
   }
 }
 ```
 
-**The endpoint** is the repository — it declares only its URL and assembler; the CRUD comes from the base class:
+Everything the API does that your model should not inherit — naming, nulls, a flattened field, a date as a string — is absorbed in these three methods. This is the single most valuable file in the layer: when the backend changes a field name, exactly one file changes.
+
+## 3. The endpoint — `orders-api-endpoint.ts`
+
+The repository. It declares its URL and its assembler; the operations come from the base class.
 
 ```typescript
 // ordering/infrastructure/orders-api-endpoint.ts
-export class OrdersApiEndpoint extends BaseApiEndpoint<Order, OrderResource, OrdersResponse, OrderAssembler> {
+import {HttpClient} from '@angular/common/http';
+import {BaseApiEndpoint} from '../../shared/infrastructure/base-api-endpoint';
+import {environment} from '../../../environments/environment';
+import {Order} from '../domain/model/order.entity';
+import {OrderResource, OrdersResponse} from './orders-response';
+import {OrderAssembler} from './order-assembler';
+
+const ordersEndpointUrl =
+  `${environment.platformProviderApiBaseUrl}${environment.platformProviderOrdersEndpointPath}`;
+
+/**
+ * CRUD endpoint for orders — the repository of this aggregate.
+ */
+export class OrdersApiEndpoint
+  extends BaseApiEndpoint<Order, OrderResource, OrdersResponse, OrderAssembler> {
   constructor(http: HttpClient) {
-    super(http, `${environment.apiBaseUrl}/orders`, new OrderAssembler());
+    super(http, ordersEndpointUrl, new OrderAssembler());
   }
 }
 ```
 
-**The context API** (`*-api.ts`, extends `BaseApi`) is the single service the application layer talks to. It owns the context's endpoints (often more than one) and exposes its operations — so the store never touches an endpoint directly:
+An endpoint is a plain class, not an `@Injectable`. It is constructed by the context API, which is the injectable one — that is what keeps a store from ever holding an endpoint.
+
+## 4. The context API — `ordering-api.ts`
+
+One per bounded context, extending `BaseApi`. It owns the context's endpoints and exposes them as operations named in the ubiquitous language.
 
 ```typescript
 // ordering/infrastructure/ordering-api.ts
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class OrderingApi extends BaseApi {
-  private readonly orders: OrdersApiEndpoint;
+  private readonly ordersEndpoint: OrdersApiEndpoint;
+  private readonly menuItemsEndpoint: MenuItemsApiEndpoint;
 
   constructor(http: HttpClient) {
     super();
-    this.orders = new OrdersApiEndpoint(http);
+    this.ordersEndpoint = new OrdersApiEndpoint(http);
+    this.menuItemsEndpoint = new MenuItemsApiEndpoint(http);
   }
 
-  getOrders(): Observable<Order[]> { return this.orders.getAll(); }
-  createOrder(order: Order): Observable<Order> { return this.orders.create(order); }
-  updateOrder(order: Order): Observable<Order> { return this.orders.update(order, order.id); }
-  deleteOrder(id: number): Observable<void> { return this.orders.delete(id); }
+  /**
+   * @returns Every order in the context.
+   */
+  getOrders(): Observable<Order[]> { return this.ordersEndpoint.getAll(); }
+
+  getOrder(id: number): Observable<Order> { return this.ordersEndpoint.getById(id); }
+
+  createOrder(order: Order): Observable<Order> { return this.ordersEndpoint.create(order); }
+
+  updateOrder(order: Order): Observable<Order> {
+    return this.ordersEndpoint.update(order, order.id);
+  }
+
+  deleteOrder(id: number): Observable<void> { return this.ordersEndpoint.delete(id); }
+
+  getMenuItems(): Observable<MenuItem[]> { return this.menuItemsEndpoint.getAll(); }
 }
 ```
 
-So a read runs `response → toEntitiesFromResponse → entities`, and a create/update runs `entity → toResourceFromEntity → POST/PUT → entity`. For CRUD there's **no separate request DTO** — the resource is the write payload. The assembler is the **anti-corruption layer**: the API's naming and quirks stop here and never reach the domain or the views.
+The store depends on `OrderingApi` and nothing else in this layer. A context with three aggregates has three endpoint fields here and one store talking to all of them.
 
-> **Command-style writes.** When a write carries a command rather than an entity (the non-CRUD case), the request body often differs from any resource, so add a dedicated **`*.request.ts`** DTO and an assembler that maps **command → request** (and **response → resource**) — e.g. a `SignInAssembler` with `toRequestFromCommand(command): SignInRequest` and `toResourceFromResponse(response): SignInResource`. Same ACL idea, just for an action instead of a record.
+## The round trip
+
+```
+read    GET  → OrdersResponse → toEntitiesFromResponse → Order[]
+write   Order → toResourceFromEntity → POST/PUT → OrderResource → toEntityFromResource → Order
+delete  DELETE → void
+```
+
+For CRUD there is **no separate request DTO** — the resource is the write payload, which is why `BaseAssembler` has `toResourceFromEntity` and nothing else for writes. When the body is not a record, the path changes shape; see `commands-and-actions.md`.

@@ -24,9 +24,11 @@ Works on Spring Boot 3 and 4 with Java 17+.
 
 ### `ddd-angular` — writing it in Angular
 
-Bounded contexts as feature folders with four layers inside each, the shared kernel, entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, views and components, per-context lazy routing, and reactive forms.
+Bounded contexts as feature folders with four layers inside each, the shared kernel, entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, views and components, per-context lazy routing, reactive forms, and cross-cutting concerns placed in the context that owns the rule.
 
-It is honest about what DDD means on a client: the backend is the system of record and owns the invariants, so this is DDD-inspired organization rather than a second place to enforce business rules. Idioms follow the Angular 20+ style and apply unchanged on 21 and 22.
+It is deliberately **opinionated**: for every decision it names one convention — the file-to-class naming table, where URLs come from, how a store publishes state, what a JSDoc block is for — and says what that convention buys, rather than listing options. It also ships code: `assets/shared-kernel/` holds the seven base classes to copy as they are, and `scripts/new-context.py` scaffolds a whole bounded context from a context and an entity name.
+
+It is honest about what DDD means on a client: the backend is the system of record and owns the invariants, so this is DDD-inspired organization rather than a second place to enforce business rules. The idioms are standalone components, signals, and `inject()`, and they hold across current Angular versions.
 
 ## Installation
 
