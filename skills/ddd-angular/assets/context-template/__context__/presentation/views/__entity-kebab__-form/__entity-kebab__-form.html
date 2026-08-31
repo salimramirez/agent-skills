@@ -1,0 +1,11 @@
+<h1>{{ isEdit ? 'Edit __Entity__' : 'New __Entity__' }}</h1>
+
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <label for="name">Name</label>
+  <input id="name" type="text" formControlName="name"/>
+  @if (isInvalidControl(form, 'name')) {
+    <p role="alert">{{ errorMessagesForControl(form, 'name') }}</p>
+  }
+
+  <button type="submit" [disabled]="form.invalid">{{ isEdit ? 'Update' : 'Create' }}</button>
+</form>
