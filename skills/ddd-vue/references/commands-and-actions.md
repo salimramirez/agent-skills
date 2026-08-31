@@ -16,7 +16,7 @@ Three files beside the command itself (which lives in `domain/model/`, see `doma
 
 ## 1. The resource — `place-order.resource.js`
 
-What comes back. A **class**, not a bare object: it names the shape, and `new PlaceOrderResource(response.data)` fails loudly the day the API drops a field, where a plain destructure would quietly produce `undefined`.
+What comes back. A **class**, not a bare object — not because it validates anything (a missing field lands as `undefined` here exactly as it would anywhere else), but because it gives the wire shape a name, one place to document it, and one place to add a check the day you want one.
 
 ```javascript
 // ordering/infrastructure/place-order.resource.js

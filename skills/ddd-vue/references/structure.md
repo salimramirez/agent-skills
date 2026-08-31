@@ -84,7 +84,7 @@ VITE_MENU_ITEMS_ENDPOINT_PATH="/menu-items"
 
 The keys say **which provider** and **which endpoint**: `VITE_PLATFORM_API_URL` is your own backend; a third party gets its own prefix (`VITE_MAPS_API_URL`, `VITE_PAYMENTS_API_URL`). That makes it obvious at a glance when a call leaves your system — and those are exactly the calls that need an anti-corruption layer.
 
-Both files declare the **same keys**; only the values differ. A key in one and missing from the other is `undefined` at runtime, which axios turns into a request against the wrong host rather than an error you can read.
+Both files declare the **same keys**; only the values differ. A key missing from one of them is `undefined` at runtime, and axios turns an undefined `baseURL` into a **relative** request against the app's own origin — so the call quietly hits your dev server and comes back with `index.html` or a 404, never an error that names the missing key.
 
 > **Secrets.** Everything prefixed `VITE_` is inlined into the bundle and readable by anyone. Fine for a public, rate-limited provider; anything that must stay secret belongs behind your own backend.
 

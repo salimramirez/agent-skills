@@ -101,7 +101,16 @@ Note `order.isCancellable()` in the template. The rule lives on the entity (see 
 Two details that keep the split honest:
 
 - **Type the prop with the entity class.** `{type: Order, required: true}` makes Vue warn in development when a raw resource is passed instead of an assembled entity — a cheap check that the anti-corruption layer was not skipped.
-- **`toRefs(props)`** so destructuring does not flatten reactivity. Destructuring `props` directly gives a value that never updates.
+- **`toRefs(props)`** so destructuring keeps reactivity. Which form you use matters, and the difference is invisible until a prop changes:
+
+  ```javascript
+  const {order} = defineProps({order: {...}});            // reactive — Vue 3.5+ rewrites this
+  const props = defineProps({order: {...}});
+  const {order} = props;                                  // NOT reactive, stuck on the first value
+  const {order} = toRefs(props);                          // reactive, on every version
+  ```
+
+  Destructuring the `defineProps()` **call** is compiled into property accesses and stays reactive from Vue 3.5 on. Destructuring the `props` **variable** is a plain object destructure and freezes the value. `toRefs` works either way, which is why the convention uses it.
 
 The view stays thin too: wire the store to the components, handle navigation, stop. A view that filters, merges, or reformats domain data has taken work that belongs to a `computed` in the store or a method on the entity.
 

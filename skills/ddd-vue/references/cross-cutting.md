@@ -77,7 +77,7 @@ export class OrderingApi extends BaseApi {
 
 It is tempting to import the interceptor inside `base-api.js` so every gateway gets it for free. That inverts the dependency rule — the shared kernel would depend on `identity`, and a project without an identity context could no longer use the kernel. One line per gateway is the price of keeping the arrow pointing the right way.
 
-Because a store is read inside the interceptor, Pinia must be installed before the first request goes out. Constructing gateways at module scope in a store file (see `state-store.md`) is fine: the module only evaluates when the store is first used, which is after `app.use(pinia)`.
+Because a store is read inside the interceptor, Pinia must be active by the time a request goes out. Constructing gateways at module scope in a store file (see `state-store.md`) is still fine — but not for the reason it looks like. ES modules evaluate **eagerly**, the moment they are imported, so that `new OrderingApi()` really does run before `app.use(pinia)`. It is safe because building an Axios client touches no store; the interceptor is a function that only *runs* when a request is sent, from inside an action, long after Pinia is installed.
 
 If a token must survive a reload, the **store** reads and writes it (`localStorage`, or a cookie), so persistence stays a decision of the application layer rather than of the interceptor.
 
