@@ -112,13 +112,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__.split("Usage:", 1)[1] if "Usage:" in __doc__ else None)
     parser.add_argument("--eval-set", required=True,
-                        help="JSON array of {query, should_trigger}")
+                        help="JSON array of either {query, should_trigger} or {query, expect}")
     parser.add_argument("--project", required=True,
                         help="scratch project to run in; should resemble what the queries describe")
     parser.add_argument("--skill", action="append", required=True, dest="skills",
                         help="skill directory to install; repeat for every competing skill")
-    parser.add_argument("--expect", required=True,
-                        help="skill name a should_trigger query is expected to reach")
+    parser.add_argument("--expect", default=None,
+                        help="skill a should_trigger query should reach; omit when the eval set "
+                             "names an expected skill per case")
     parser.add_argument("--runs", type=int, default=2, help="runs per query (default 2)")
     parser.add_argument("--workers", type=int, default=8, help="parallel workers (default 8)")
     parser.add_argument("--timeout", type=int, default=180, help="seconds per run (default 180)")
@@ -127,6 +128,12 @@ def main():
     args = parser.parse_args()
 
     cases = json.loads(Path(args.eval_set).read_text(encoding="utf-8"))
+    # Two eval-set shapes. The original asks one yes/no question about one skill;
+    # the routing shape asks which of several skills should win, which is the only
+    # way to see a sibling stealing a query.
+    per_case = any("expect" in case for case in cases)
+    if not per_case and not args.expect:
+        raise SystemExit("--expect is required unless every case names its own expected skill")
     installed = install_skills(args.project, args.skills)
     print(f"skills installed in {args.project}: {', '.join(installed)}\n")
 
@@ -151,25 +158,34 @@ def main():
               f"(rate limit, timeout, or a failed call). Scores below are not "
               f"trustworthy -- re-run when calls succeed.\n")
 
+    def expected(case):
+        return case.get("expect") if per_case else (args.expect if case["should_trigger"] else None)
+
     passed_positive = passed_negative = 0
-    for wanted, heading in ((True, f"should trigger {args.expect}"),
-                            (False, f"should NOT trigger {args.expect}")):
-        print(f"=== {heading} ===")
+    groups = sorted({expected(c) for c in cases if expected(c)}) if per_case else [args.expect]
+    for wanted in groups + [None]:
+        print(f"=== {'should reach ' + wanted if wanted else 'should reach none of them'} ===")
         for index, case in enumerate(cases):
-            if case["should_trigger"] != wanted:
+            if expected(case) != wanted:
                 continue
             results = observed[index]
-            hits = sum(1 for r in results if r == args.expect)
-            good = hits >= len(results) / 2 if wanted else hits < len(results) / 2
-            passed_positive += good and wanted
-            passed_negative += good and not wanted
+            if wanted:
+                hits = sum(1 for r in results if r == wanted)
+                good = hits >= len(results) / 2
+                passed_positive += good
+            else:
+                watched = groups if per_case else [args.expect]
+                hits = sum(1 for r in results if r in watched)
+                good = hits < len(results) / 2
+                passed_negative += good
             print(f"  {'ok  ' if good else 'FAIL'} {hits}/{len(results)} "
-                  f"{','.join(sorted(set(results))):32.32} {case['query'][:56]}")
+                  f"{','.join(sorted(set(results))):34.34} {case['query'][:52]}")
         print()
 
     total = len(cases)
-    print(f"positives {passed_positive}/{sum(1 for c in cases if c['should_trigger'])}   "
-          f"negatives {passed_negative}/{sum(1 for c in cases if not c['should_trigger'])}   "
+    positives = sum(1 for c in cases if expected(c))
+    print(f"routed correctly {passed_positive}/{positives}   "
+          f"correctly not routed {passed_negative}/{total - positives}   "
           f"total {passed_positive + passed_negative}/{total}")
 
     if args.json_out:
