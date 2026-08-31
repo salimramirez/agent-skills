@@ -31,11 +31,26 @@ The other negatives cover a Spring Boot aggregate (should reach `ddd-spring-boot
 
 ## Last result
 
-**Partial, 2026-08-31.** The run hit the session limit part-way through: 13 of 42 calls never reached the model, so it exited `2` and the headline score does not count.
+**2026-08-31, 42 runs.** 38 reached the model; 4 timed out, which trips exit code `2`, so the headline `18/21` is not the number to quote. The routings themselves are unambiguous.
 
-What the 29 calls that *did* reach the model show, and it is the answer to the question this set exists to ask:
+Of the 38 that reached the model, 29 named a skill and **exactly two were wrong — both of them the same query**:
 
-- **Not one query routed to the wrong sibling.** 26 frontend routings — 10 to `ddd-angular`, 8 to `ddd-vue`, 8 to `ddd-react` — every one of them correct.
-- The Spring Boot query reached `ddd-spring-boot`, and the EventStorming query reached `ddd-playbook`. The two non-frontend siblings won their own queries rather than losing them to a frontend skill.
+| | |
+| --- | --- |
+| No sibling stole another's query | 26 frontend routings, every one correct |
+| `ddd-spring-boot` and `ddd-playbook` | each won their own query |
+| **`ddd-vue` claimed a Svelte query** | 2 of 2 here, and 3 of 3 in a follow-up probe |
 
-A clean run is still owed. Every failure was a non-answer — a `<call-failed>`, a `<timeout>`, or Claude reaching for `Bash` to look around first — and none was a wrong routing, so the expectation is that a full run confirms this. Until it does, treat the result as a strong signal rather than a measurement.
+The remaining nine non-routings were Claude reaching for `Bash` to look around first (7) or answering in prose (2). Both are harness characteristics rather than description failures: a bare scratch project gives the model nothing to read, so exploring first is reasonable behaviour.
+
+### The one finding
+
+**"tengo una app en svelte y quiero organizarla por dominio con capas"** goes to `ddd-vue`, consistently — five out of five successful runs across two sessions. Not variance.
+
+Whether that is a defect is a judgment call. The four-layer structure genuinely transfers to Svelte, so the answer is not useless; but the skill is Vue-specific and will hand that reader Pinia, `<script setup>` and `defineProps`. The three descriptions are structurally identical — same opening, same `Not for …` clause — so nothing in the wording explains why Vue wins it rather than React or Angular.
+
+Left as recorded rather than patched. Tightening a description is a change to the trigger mechanism, and it should not be made without the budget to measure the result.
+
+### Still owed
+
+A run with no timeouts, and the per-skill set at `evals/ddd-angular/`. Both attempts at the latter have now been cut short by the session limit; it is not a skill problem, and exit code `2` has correctly refused to publish numbers each time.
