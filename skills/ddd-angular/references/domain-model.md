@@ -73,16 +73,6 @@ export class Order implements BaseEntity {
    */
   get courier(): Courier | null { return this._courier; }
   set courier(value: Courier | null) { this._courier = value; }
-
-  /** Whether the customer can still cancel, per the status the backend reported. */
-  isCancellable(): boolean {
-    return this._status === 'PLACED' || this._status === 'CONFIRMED';
-  }
-
-  /** How many items the order contains across all its lines. */
-  itemCount(): number {
-    return this._lines.reduce((count, line) => count + line.quantity, 0);
-  }
 }
 ```
 
@@ -93,21 +83,6 @@ Three conventions are doing work here.
 **One options object in the constructor.** Positional parameters of the same type are a bug waiting to happen; `new Order({id, customerId, lines, status, total})` reads at the call site and survives a new field being added.
 
 **Other aggregates by identity.** `_customerId` is a number, not a `Customer`. This is the aggregate rule from the core, and it holds on the client for a practical reason too: the API returns ids, and holding an object would mean the entity could only be built once its neighbour had loaded.
-
-## Give the entity behaviour
-
-The accessors are the shape; the methods are the point. `isCancellable()` and `itemCount()` are what keep the class from being a bag of fields that every template re-derives:
-
-```html
-<!-- the same rule, spelled out in three templates, drifting apart -->
-<button *ngIf="order.status === 'PLACED' || order.status === 'CONFIRMED'">Cancel</button>
-```
-
-That is the **anemic domain model** — the failure the core section names as the most common in DDD, and the one thing this skill exists to prevent. It is easy to fall into here because the accessors already feel like work, and because the backend really does own the invariants.
-
-Those two things are not in conflict. Enforcing an invariant is the backend's job; **answering a question about the entity's own fields is not**. A method that reads only off `this` costs nothing to trust, cannot be bypassed in any way that matters, and gives the same answer to every template that asks. That is the test: when a rule reads only off an entity's own fields, it belongs on the entity. A rule that needs two aggregates belongs in the store.
-
-The same applies to presentation-shaped questions that are really domain questions — a display label, a derived total, a formatted delivery window. Put the method on the entity and let every view call it.
 
 ## Resolved related objects
 
