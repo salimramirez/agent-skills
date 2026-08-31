@@ -5,6 +5,27 @@ Entities as plain classes that carry behaviour, and commands for non-CRUD intent
 Model the domain as **classes** named in the ubiquitous language, one per file, in `domain/model/`. An entity has **public fields**, a constructor taking a **single options object with defaults**, and — this is the part that matters — **behaviour**.
 
 ```javascript
+// ordering/domain/model/order-line.js
+
+/**
+ * One line of an order: what was ordered, and how many.
+ *
+ * @class OrderLine
+ */
+export class OrderLine {
+    /**
+     * @param {Object} params - Line attributes.
+     * @param {?number} [params.menuItemId=null] - Identity of the item ordered.
+     * @param {number} [params.quantity=0] - How many.
+     */
+    constructor({menuItemId = null, quantity = 0} = {}) {
+        this.menuItemId = menuItemId;
+        this.quantity = quantity;
+    }
+}
+```
+
+```javascript
 // ordering/domain/model/order.entity.js
 import {OrderLine} from './order-line.js';
 

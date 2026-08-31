@@ -136,21 +136,33 @@ Load order matters: menu items before orders. Keep it out of the views — that 
 A small app, or a single read-only context, can hold state in a plain `reactive()` object and skip Pinia entirely:
 
 ```javascript
-// news/application/news.store.js
-export const newsStore = reactive({
-    sources: [],
+// catalog/application/catalog.store.js
+import {reactive} from 'vue';
+import {CatalogApi} from '../infrastructure/catalog-api.js';
+import {MenuItemAssembler} from '../infrastructure/menu-item.assembler.js';
+
+const catalogApi = new CatalogApi();
+
+/**
+ * State and use cases of the catalog bounded context.
+ *
+ * @type {Object}
+ */
+export const catalogStore = reactive({
+    /** @type {MenuItem[]} The menu as last loaded. */
+    menuItems: [],
+    /** @type {Array<Error>} Errors from failed calls. */
     errors: [],
-    currentSource: null,
 
     /**
-     * Loads the available sources and selects the first one.
+     * Loads the menu, once.
      * @returns {void}
      */
-    loadSources() {
-        newsApi.getSources()
+    loadMenuItems() {
+        if (this.menuItems.length > 0) return;
+        catalogApi.getMenuItems()
             .then(response => {
-                this.sources = SourceAssembler.toEntitiesFromResponse(response);
-                if (this.sources.length > 0) this.setCurrentSource(this.sources[0]);
+                this.menuItems = MenuItemAssembler.toEntitiesFromResponse(response);
             })
             .catch(error => this.errors.push(error));
     }

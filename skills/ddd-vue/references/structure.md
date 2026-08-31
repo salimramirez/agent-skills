@@ -47,7 +47,7 @@ Two separators, and each means something:
 | application | `ordering.store.js` | `useOrderingStore` (default export) |
 | infrastructure | `order.assembler.js` | `class OrderAssembler`, static methods |
 | infrastructure | `ordering-api.js` | `class OrderingApi extends BaseApi` |
-| infrastructure | `sign-in.resource.js` | `class SignInResource` |
+| infrastructure | `place-order.resource.js` | `class PlaceOrderResource` |
 | infrastructure | `authentication.guard.js` | `authenticationGuard` |
 | infrastructure | `identity.interceptor.js` | `identityInterceptor` |
 | presentation | `ordering-routes.js` | `orderingRoutes` (default export) |
