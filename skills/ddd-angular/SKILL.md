@@ -3,7 +3,7 @@ name: ddd-angular
 description: Structure an Angular frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, and a presentation layer of views and components. Use when organizing or refactoring an Angular app by business domain rather than by technical type, isolating API contracts from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Angular framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.1.4"
+  version: "1.2.0"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -91,7 +91,7 @@ The rules this skill applies by default. Each one is expanded, with its reason, 
 - **A bounded context is a feature folder** under `src/app/`, with `domain/`, `application/`, `infrastructure/`, and `presentation/` inside it. `shared/` is the kernel and stays small.
 - **One store per context**, named after the context (`OrderingStore`), not per entity and not one for the app.
 - **The store is the only thing that calls the context API**; only an endpoint touches `HttpClient`. A view calls its store, and that is the whole chain.
-- **Entities are classes** in `*.entity.ts` — private fields, accessors, one options-object constructor, `implements BaseEntity`. A setter exists only where the UI genuinely changes the value.
+- **Entities are classes** in `*.entity.ts` — private fields, accessors, one options-object constructor, `implements BaseEntity`. A setter exists only where the UI genuinely changes the value. **They carry behaviour**: a rule that reads only off an entity's own fields belongs on the entity, not repeated in every template.
 - **Other aggregates are referenced by id.** A resolved object is stitched in by the store, and the id stays the source of truth.
 - **The resource never leaves `infrastructure/`.** Assemblers are the anti-corruption layer; a snake_case field in a template means one was skipped.
 - **CRUD writes send the entity; everything else sends a command.** A command is a class with no id, and it travels through its own request DTO.
