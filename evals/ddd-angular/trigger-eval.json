@@ -1,0 +1,23 @@
+[
+  {"query": "heredé una app angular donde todo está en src/app/services y src/app/components, como 40 archivos por carpeta. quiero reorganizarla por área de negocio (tenemos pedidos, catálogo y clientes) pero no sé por dónde empezar ni qué va en cada capa", "should_trigger": true},
+  {"query": "tengo un componente order-list.ts de 400 líneas que hace la llamada http, filtra, calcula totales y navega. sé que está mal pero no tengo claro qué parte va al store y qué parte al servicio", "should_trigger": true},
+  {"query": "el backend me devuelve customer_id, created_at y un status como string suelto, y esos nombres se me han metido hasta en los templates. cómo aíslo la forma del API del modelo de mi app en angular", "should_trigger": true},
+  {"query": "vamos a arrancar un módulo nuevo de facturación en la app de angular 20. quiero montarlo bien desde el principio, con el dominio separado de la UI. qué carpetas creo y qué pongo en cada una", "should_trigger": true},
+  {"query": "estoy aplicando domain driven design en el frontend con angular. dónde debería vivir la lógica de negocio y cuánta tiene sentido replicar si el backend ya la valida", "should_trigger": true},
+  {"query": "mi CoursesService hace de todo: llama al api, cachea, mapea, y encima lo inyectan 6 componentes distintos. quiero partirlo pero que no acabe en 20 servicios sueltos", "should_trigger": true},
+  {"query": "tenemos dos áreas en la misma app angular, reservas y pagos, y las dos tienen una clase User distinta pero comparten un modelo común que ya no le sirve bien a ninguna. cómo separo eso", "should_trigger": true},
+  {"query": "en mis formularios reactivos estoy construyendo directamente el body del post con snake_case. alguien me dijo que eso es un smell, qué debería construir en su lugar", "should_trigger": true},
+  {"query": "cómo organizo un frontend angular por bounded contexts y dónde encajan los signals stores dentro de eso", "should_trigger": true},
+  {"query": "necesito meter una capa anticorrupción entre nuestra app angular y un proveedor externo de tracking, porque su json cambia cada dos por tres y no quiero que eso llegue a mis componentes", "should_trigger": true},
+
+  {"query": "estoy modelando el agregado Order en spring boot con jpa. el OrderId como value object embebido me obliga a un @EmbeddedId y no sé si merece la pena frente a un Long autogenerado", "should_trigger": false},
+  {"query": "vamos a hacer un eventstorming la semana que viene con los de negocio para sacar los bounded contexts del sistema de reservas. cómo preparo la sesión y qué salgo buscando", "should_trigger": false},
+  {"query": "actualicé a angular 21 y ahora me saltan errores de change detection en un componente que usa OnPush con un observable. cómo depuro eso", "should_trigger": false},
+  {"query": "quiero personalizar la paleta de angular material, tengo un custom-theme.scss pero los botones no cogen el color primario", "should_trigger": false},
+  {"query": "tengo una app en react con redux toolkit y quiero reorganizarla por dominio en vez de por tipo de archivo. cómo estructuro las carpetas", "should_trigger": false},
+  {"query": "mi bundle inicial son 2.2 MB y tarda un montón en cargar. qué puedo hacer con lazy loading y preloading para bajarlo", "should_trigger": false},
+  {"query": "quiero migrar los tests de karma a jest en un workspace angular con 3 librerías. qué configuración necesito en jest.config y en tsconfig.spec", "should_trigger": false},
+  {"query": "en ngrx, cuál es la forma correcta de encadenar dos effects donde el segundo necesita el resultado del primero sin meterme en un switchMap anidado", "should_trigger": false},
+  {"query": "estoy diseñando los endpoints REST de nuestra api de pedidos. debería exponer /orders/{id}/cancel o mandar un PATCH con el status nuevo", "should_trigger": false},
+  {"query": "necesito escribir tests unitarios para un servicio angular que hace peticiones http, con HttpTestingController. cómo monto el spec", "should_trigger": false}
+]
