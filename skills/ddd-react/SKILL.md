@@ -3,7 +3,7 @@ name: ddd-react
 description: Structure a React frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of immutable entity and command classes that carry behaviour, assemblers as an anti-corruption layer against the backend API, Zustand stores, and a presentation layer of routed views and reusable components. Use when organizing or refactoring a React app by business domain rather than by technical type, isolating API payloads from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, React framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.0.1"
+  version: "1.0.2"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -23,11 +23,13 @@ The backend is the **system of record**: it owns the business rules, the invaria
 
 What the frontend *does* gain from DDD is **structure**: organizing the app by the domain (not by technical type), speaking the same **ubiquitous language** as the backend and the experts, keeping a client-side model of the domain separate from the UI, and pushing logic out of components. So treat what follows as **DDD-inspired organization**, not as a place to re-enforce business rules.
 
+The rules below are Domain-Driven Design in general, written for a model that owns its data. A client model does not, so some of them arrive intact, some loosen, and a few do not apply at all — the section immediately after the block says which is which. Read the two together.
+
 <!-- ddd:core:start -->
 
 ## Prime directive: model the domain, and protect it
 
-- Put business rules and invariants **inside the domain model itself**, not scattered across controllers, services, or SQL. A model that only holds data while the logic lives elsewhere is an *anemic domain model* — the most common DDD failure, and the main thing this skill exists to prevent.
+- Put business rules and invariants **inside the domain model itself**, not scattered across controllers, services, or SQL. A model that only holds data while the logic lives elsewhere is an *anemic domain model* — the most common DDD failure, and the main thing DDD exists to prevent.
 - Speak the **ubiquitous language**: use the exact terms domain experts use, in the code (class, method, variable names) and in conversation. If the business says "policy", the class is `Policy`, not `InsuranceRecord`. A gap between code and language is a defect waiting to happen.
 - Keep the **domain pure**: the domain layer expresses business concepts and must not depend on frameworks, persistence, web, or messaging concerns. Those belong at the edges.
 
@@ -83,8 +85,11 @@ Command Query Responsibility Segregation separates the model that **changes** st
 ## What carries over, loosens, or doesn't apply
 
 - **Carries over:** the ubiquitous language; bounded contexts; the four-layer split with an isolated domain; anti-corruption via assemblers; keeping logic out of the UI.
-- **Loosens:** repositories are API endpoints rather than aggregate stores; aggregates and value objects are lighter or skipped (the UI rarely needs them); "domain events" are usually state updates.
-- **Doesn't apply:** authoritative invariants and transactional consistency — those belong to the backend. Client-side checks are UX, and the server validates again.
+- **Loosens:** repositories are API endpoints rather than aggregate stores, so the repository interface the core puts in the domain layer has no counterpart here; aggregates and value objects are lighter or skipped (the UI rarely needs them); "domain events" are usually state updates rather than published events.
+- **Doesn't apply:** three of the core's rules are about a model that owns its data, and a client's does not.
+  - **Enforcing invariants inside the aggregate root.** The server enforces them; a client-side check is UX, and the server validates again.
+  - **One aggregate, one transaction.** There are no transactions here. What the core is protecting — consistency — is the server's to protect.
+  - **The anemic-model test.** It asks whether a model that owns its data has let its rules leak elsewhere. A client model is a projection of a model that lives elsewhere, so it cannot fail that test, and there is no rule here about entities having to protect themselves. Put a method on an entity when it stops an expression being repeated across views, not out of duty.
 
 ## The house style in one screen
 
