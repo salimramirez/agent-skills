@@ -118,4 +118,4 @@ The store sends it through the command-to-request assembler from `commands-and-a
 
 Either way the division holds: validation feedback stays in the form, the shape of the write (entity or command) stays in the domain, coordination stays in the store, and navigation stays with the view that dispatched.
 
-> Reactive forms are the convention here and remain fully supported. Newer Angular versions add a signal-based forms API alongside them; adopting it changes how a form is declared, not where the write is built or who it is handed to.
+> Reactive forms are the convention here and remain fully supported. Signal Forms ship alongside them as a stable, signal-native alternative in current Angular; adopting them changes how a form is declared, not where the write is built or who it is handed to — the view still builds an entity or a command and hands it to the store.
