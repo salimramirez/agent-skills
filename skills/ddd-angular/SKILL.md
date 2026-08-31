@@ -3,7 +3,7 @@ name: ddd-angular
 description: Structure an Angular frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, and a presentation layer of views and components. Use when organizing or refactoring an Angular app by business domain rather than by technical type, isolating API contracts from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Angular framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.1.3"
+  version: "1.1.4"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -133,22 +133,28 @@ Read the file that matches the task at hand.
 
 ## Copy instead of retyping
 
-Two things ship as code, because they should come out the same every time:
+Two things ship as code, because they should come out the same every time.
+
+**Run both commands from the root of the Angular app**, with `$SKILL` pointing at the directory this skill was installed into — `.claude/skills/ddd-angular` in a standard install:
+
+```bash
+SKILL=.claude/skills/ddd-angular
+```
 
 - **`assets/shared-kernel/`** — the seven base files, already laid out in the layers they belong to. Copy the folder's contents into `src/app/shared/` and they land where their imports expect:
 
   ```bash
-  cp -R skills/ddd-angular/assets/shared-kernel/ src/app/shared/
+  cp -R "$SKILL/assets/shared-kernel/" src/app/shared/
   ```
 
   Do not paraphrase them from the docs, and do not flatten them — `base-assembler` and `base-api-endpoint` reach `base-entity` through `../domain/model/`.
 - **`scripts/new-context.py`** — scaffolds a whole bounded context wired for one CRUD aggregate, deriving every spelling of the name from two arguments:
 
   ```bash
-  python3 scripts/new-context.py --context ordering --entity Order --into src/app
+  python3 "$SKILL/scripts/new-context.py" --context ordering --entity Order --into src/app
   ```
 
-  Add `--dry-run` to see what it would write, `--plural People` when the naive plural is wrong. It prints the two edits it cannot make for you: the `environment` keys and the route in `app.routes.ts`. What it writes is ordinary code — read it, then model the real aggregate.
+  `--into` is resolved against the current directory, so run this from the app root, not from the skill folder. Add `--dry-run` to see what it would write, `--plural People` when the naive plural is wrong. It prints the two edits it cannot make for you: the `environment` keys and the route in `app.routes.ts`. What it writes is ordinary code — read it, then model the real aggregate.
 
 For Angular questions the references do not cover, read the documentation at `https://angular.dev`.
 

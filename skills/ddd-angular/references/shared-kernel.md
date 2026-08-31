@@ -22,7 +22,7 @@ shared/
 **Copy these seven files as they are** from `assets/shared-kernel/` — they are boilerplate, and the whole point is that every project has the same ones. That folder mirrors the tree above, so its contents drop straight into `src/app/shared/`:
 
 ```bash
-cp -R skills/ddd-angular/assets/shared-kernel/ src/app/shared/
+cp -R "$SKILL/assets/shared-kernel/" src/app/shared/    # $SKILL = this skill's directory
 ```
 
 Keep the layers when you copy. `base-assembler` and `base-api-endpoint` import `BaseEntity` through `../domain/model/`, so flattening the folder breaks them. What each file contributes:
