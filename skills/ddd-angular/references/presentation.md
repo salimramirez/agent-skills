@@ -131,6 +131,30 @@ Three things this buys: the bounded-context boundary is visible in the routing t
 <app-layout/>
 ```
 
+```typescript
+// shared/presentation/components/layout/layout.ts
+
+/**
+ * The app shell — chrome around whatever the router puts in the outlet.
+ */
+@Component({
+  selector: 'app-layout',
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FooterContent],
+  templateUrl: './layout.html',
+  styleUrl: './layout.css'
+})
+export class Layout {
+  /**
+   * The navigation, one entry per destination the app exposes.
+   */
+  protected readonly options = [
+    {link: '/home',             label: 'Home'},
+    {link: '/ordering/orders',  label: 'Orders'},
+    {link: '/about',            label: 'About'}
+  ];
+}
+```
+
 ```html
 <!-- shared/presentation/components/layout/layout.html -->
 <header>

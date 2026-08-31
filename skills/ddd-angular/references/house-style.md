@@ -47,6 +47,18 @@ Pair each writable signal with its read-only view immediately, not in a separate
 
 Use `inject()` for dependencies rather than constructor parameters — in components, views, stores, guards, and interceptors alike. A constructor is then free to do actual work, such as an eager load or reading a route parameter. The exception is a dependency you need **in order to build something else** in the constructor: a context API declares `constructor(http: HttpClient)` because it forwards `http` into the endpoints it constructs, and those endpoints are plain classes outside the injector entirely. Everywhere else, `inject()`.
 
+That exception is also the one thing tying a class to `@Injectable`. Angular's `@Service()` decorator is a shorthand for `@Injectable({ providedIn: 'root' })` — root-provided by default, `autoProvided: false` to opt out — but it accepts **only** `inject()`, never constructor injection. So a store, which injects everything, can move to `@Service()` untouched; a context API cannot, unless you first rewrite it as a field:
+
+```typescript
+@Service()
+export class OrderingApi extends BaseApi {
+  private readonly http = inject(HttpClient);
+  private readonly ordersEndpoint = new OrdersApiEndpoint(this.http);
+}
+```
+
+Both forms are correct. Pick one per project and stay with it — a codebase where half the services take a constructor and half do not is harder to read than either convention alone.
+
 ## Keep the layers honest
 
 These are the rules the structure exists to enforce. Each is a smell with a name:

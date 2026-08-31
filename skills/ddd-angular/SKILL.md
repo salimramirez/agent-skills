@@ -3,7 +3,7 @@ name: ddd-angular
 description: Structure an Angular frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, and a presentation layer of views and components. Use when organizing or refactoring an Angular app by business domain rather than by technical type, isolating API contracts from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Angular framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.1.2"
+  version: "1.1.3"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -13,7 +13,7 @@ Structure an **Angular** app around a domain. Start with the honest part below �
 
 This is an **opinionated** house style: for every decision it names one convention and says what that convention buys, rather than listing options. It is one coherent way to do this, not the only correct one; where a choice is genuinely open, the reference says so. Examples use the **QuickBite** food-delivery domain, in an `ordering` bounded context.
 
-The idioms are standalone components, signals, and `inject()`. They work unchanged across current Angular versions; newer releases add alternatives — a signal-based forms API, signal-native data fetching, shorter service decorators — that you can adopt without changing anything about the structure here.
+The idioms are standalone components, signals, and `inject()`. They work unchanged across current Angular versions; newer releases add alternatives — Signal Forms, signal-native data fetching with `httpResource()`, and the `@Service()` decorator as a shorthand for `@Injectable({ providedIn: 'root' })` — that you can adopt without changing anything about the structure here. One caveat, because it bites exactly one class in this skill: `@Service()` supports **only** `inject()`, never constructor injection, so a context API written as `constructor(http: HttpClient)` stays on `@Injectable`. See [house-style.md](references/house-style.md).
 
 ## What DDD means on the frontend
 
