@@ -113,12 +113,20 @@ import i18n from './i18n.js';
 import './style.css';
 
 createApp(App)
-    .use(pinia)      // before the router: guards read stores
+    .use(pinia)
     .use(router)
     .use(i18n)
     .mount('#app');
 ```
 
-Order matters in exactly one place: **Pinia before the router**, because the navigation guard resolves a store on the first navigation. Get it backwards and the app throws on load with an error that does not mention either.
+The order of these `use` calls does not actually matter — the first navigation happens at `mount()`, by which point every plugin is installed, so a guard that resolves a store works either way. Listing Pinia first is convention, not a constraint.
+
+What genuinely breaks is **resolving a store at module scope**:
+
+```javascript
+const store = useOrderingStore();   // runs on import, before app.use(pinia)
+```
+
+There is no active Pinia yet, and the app dies on load with `Cannot read properties of undefined (reading '_s')` — a message naming neither Pinia nor your store — leaving a blank page. Call `useStore()` inside a component's `setup`, a guard, or an action, never at the top level of a module. Constructing a *gateway* at module scope is fine (see `state-store.md`); it is the store resolution that needs an active Pinia.
 
 Keep `main.js` to wiring. Nothing domain-specific belongs here: stores and gateways are reached through their own modules, so a context appearing in this file usually means someone worked around a circular import instead of fixing it.

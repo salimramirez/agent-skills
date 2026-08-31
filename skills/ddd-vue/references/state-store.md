@@ -72,13 +72,59 @@ const useOrderingStore = defineStore('ordering', () => {
             .catch(error => errors.value.push(error));
     }
 
-    // updateOrder, deleteOrder and cancelOrder have the same shape: call the
-    // gateway, assemble what comes back, update the ref, push any error.
+    /**
+     * Updates an order in place.
+     * @param {Order} order - Order carrying the new state.
+     * @returns {void}
+     */
+    function updateOrder(order) {
+        orderingApi.updateOrder(order)
+            .then(response => {
+                const updated = OrderAssembler.toEntityFromResource(response.data);
+                const index = orders.value.findIndex(current => current.id === updated.id);
+                if (index !== -1) orders.value[index] = updated;
+            })
+            .catch(error => errors.value.push(error));
+    }
+
+    /**
+     * Deletes an order and drops it from the collection.
+     * @param {number} id - Identity of the order to delete.
+     * @returns {void}
+     */
+    function deleteOrder(id) {
+        orderingApi.deleteOrder(id)
+            .then(() => {
+                const index = orders.value.findIndex(current => current.id === id);
+                if (index !== -1) orders.value.splice(index, 1);
+            })
+            .catch(error => errors.value.push(error));
+    }
+
+    /**
+     * Cancels an order, refusing when the domain says it is too late.
+     * @param {number} id - Identity of the order to cancel.
+     * @returns {void}
+     */
+    function cancelOrder(id) {
+        const order = getOrderById(id);
+        if (!order?.isCancellable()) {
+            errors.value.push(new Error('This order can no longer be cancelled'));
+            return;
+        }
+        orderingApi.cancelOrder(id)
+            .then(response => {
+                const cancelled = OrderAssembler.toEntityFromResource(response.data);
+                const index = orders.value.findIndex(current => current.id === cancelled.id);
+                if (index !== -1) orders.value[index] = cancelled;
+            })
+            .catch(error => errors.value.push(error));
+    }
 
     return {
         orders, menuItems, errors, ordersLoaded,
         activeOrders, orderCount,
-        fetchOrders, getOrderById, addOrder
+        fetchOrders, getOrderById, addOrder, updateOrder, deleteOrder, cancelOrder
     };
 });
 
@@ -86,6 +132,8 @@ export default useOrderingStore;
 ```
 
 ## What each convention is for
+
+**The returned object is the store's entire public API.** Anything left out of it does not exist on the store — `store.updateOrder` is simply `undefined`, and the view that calls it fails at runtime with nothing to point at. Add a function and add its name to the return in the same edit; this is the easiest thing to half-do in a setup store.
 
 **The gateway is instantiated once, at module scope.** `const orderingApi = new OrderingApi()` outside `defineStore` gives one Axios instance for the app rather than one per store activation.
 
@@ -109,7 +157,7 @@ const {orders, errors, ordersLoaded} = storeToRefs(store);   // stays reactive
 const {fetchOrders, deleteOrder} = store;                    // functions, no refs needed
 ```
 
-Getting this backwards produces a view that renders once and never updates again, with no error anywhere.
+Getting this backwards is worse than it looks, because it *half* works. `const {orders} = store` hands you the current array, and mutating it — a `push` from an action — still shows up, since it is the same array. It breaks the moment the store **replaces** the value, which is exactly what `fetchOrders` does with `orders.value = ...`: the view keeps rendering the array it captured at setup, and the fresh data never appears. No error, and the bug survives casual testing because adding an item still works.
 
 ## Cross-entity coordination
 

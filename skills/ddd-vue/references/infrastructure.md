@@ -118,12 +118,28 @@ export class OrderingApi extends BaseApi {
         return this.#ordersEndpoint.delete(id);
     }
 
+    /**
+     * Cancels an order.
+     *
+     * @remarks
+     * A sub-resource POST rather than a `update` — cancelling is a transition the
+     * backend decides, not a field the client sets.
+     *
+     * @param {number} id - Identity of the order to cancel.
+     * @returns {Promise<import('axios').AxiosResponse>} The response.
+     */
+    cancelOrder(id) {
+        return this.http.post(`${ordersEndpointPath}/${id}/cancel`);
+    }
+
     /** @returns {Promise<import('axios').AxiosResponse>} Every menu item. */
     getMenuItems() {
         return this.#menuItemsEndpoint.getAll();
     }
 }
 ```
+
+`cancelOrder` reaches for `this.http` directly, which is what `BaseApi`'s getter is for: not every operation is CRUD over a collection, and an endpoint that only ever POSTs to one sub-path earns nothing.
 
 Endpoints are `#private`, so the store depends on `OrderingApi` and can never reach past it. A context with three aggregates has three endpoint fields here and one store talking to all of them.
 
