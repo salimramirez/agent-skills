@@ -3,7 +3,7 @@ name: ddd-spring-boot
 description: Write Domain-Driven Design code in Spring Boot / Java — the four-layer package structure, aggregate roots as JPA entities, value objects and typed ids as embeddables, command and query services, repositories, domain events, anti-corruption layers, and the REST interface with resources and assemblers. Use when implementing or refactoring a Spring Boot service around business rules, structuring a new bounded context in Java, or pulling business logic out of controllers into a domain model. It carries the DDD design rules it depends on, so it works on its own. Not for Spring configuration, security, or framework questions unrelated to domain modeling.
 license: MIT
 metadata:
-  version: "1.0.1"
+  version: "1.0.2"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -17,7 +17,7 @@ No specific Spring Boot or Java version is assumed; the patterns here work on Sp
 
 ## Prime directive: model the domain, and protect it
 
-- Put business rules and invariants **inside the domain model itself**, not scattered across controllers, services, or SQL. A model that only holds data while the logic lives elsewhere is an *anemic domain model* — the most common DDD failure, and the main thing this skill exists to prevent.
+- Put business rules and invariants **inside the domain model itself**, not scattered across controllers, services, or SQL. A model that only holds data while the logic lives elsewhere is an *anemic domain model* — the most common DDD failure, and the main thing DDD exists to prevent.
 - Speak the **ubiquitous language**: use the exact terms domain experts use, in the code (class, method, variable names) and in conversation. If the business says "policy", the class is `Policy`, not `InsuranceRecord`. A gap between code and language is a defect waiting to happen.
 - Keep the **domain pure**: the domain layer expresses business concepts and must not depend on frameworks, persistence, web, or messaging concerns. Those belong at the edges.
 

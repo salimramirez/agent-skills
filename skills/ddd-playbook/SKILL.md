@@ -3,7 +3,7 @@ name: ddd-playbook
 description: Model a business domain with Domain-Driven Design — bounded contexts, ubiquitous language, aggregates and their invariants, value objects, domain events, and context mapping. Use when designing or refactoring a domain model, deciding aggregate boundaries, splitting a system into bounded contexts, running or interpreting an EventStorming session, or when business rules are leaking into controllers, services, or UI components — even if the user never says "DDD". It covers the modeling and the design rules, not framework idioms; for writing the code, use the companion ddd-spring-boot or ddd-angular skills. Not for plain CRUD with no business rules, database tuning, or framework how-to questions.
 license: MIT
 metadata:
-  version: "2.0.0"
+  version: "2.0.1"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -17,7 +17,7 @@ Apply this whenever you model a domain or write code around business logic. Foll
 
 ## Prime directive: model the domain, and protect it
 
-- Put business rules and invariants **inside the domain model itself**, not scattered across controllers, services, or SQL. A model that only holds data while the logic lives elsewhere is an *anemic domain model* — the most common DDD failure, and the main thing this skill exists to prevent.
+- Put business rules and invariants **inside the domain model itself**, not scattered across controllers, services, or SQL. A model that only holds data while the logic lives elsewhere is an *anemic domain model* — the most common DDD failure, and the main thing DDD exists to prevent.
 - Speak the **ubiquitous language**: use the exact terms domain experts use, in the code (class, method, variable names) and in conversation. If the business says "policy", the class is `Policy`, not `InsuranceRecord`. A gap between code and language is a defect waiting to happen.
 - Keep the **domain pure**: the domain layer expresses business concepts and must not depend on frameworks, persistence, web, or messaging concerns. Those belong at the edges.
 
