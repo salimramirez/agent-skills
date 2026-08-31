@@ -19,7 +19,13 @@ shared/
     └── views/                              // app-wide views: home, about, page-not-found
 ```
 
-**Copy these seven files as they are** from `assets/shared-kernel/` — they are boilerplate, and the whole point is that every project has the same ones. What each contributes:
+**Copy these seven files as they are** from `assets/shared-kernel/` — they are boilerplate, and the whole point is that every project has the same ones. That folder mirrors the tree above, so its contents drop straight into `src/app/shared/`:
+
+```bash
+cp -R skills/ddd-angular/assets/shared-kernel/ src/app/shared/
+```
+
+Keep the layers when you copy. `base-assembler` and `base-api-endpoint` import `BaseEntity` through `../domain/model/`, so flattening the folder breaks them. What each file contributes:
 
 | File | What it is | Why |
 | --- | --- | --- |
@@ -35,6 +41,8 @@ Two notes on `BaseApiEndpoint` worth knowing before you subclass it:
 
 - **`getAll` accepts both wire shapes** — a bare array or an envelope. A mock server that returns `[…]` and a real backend that returns `{ orders: […] }` both work without touching the store.
 - **Errors arrive as `Error`, not `HttpErrorResponse`.** The store reads `error.message`; see the `formatError` helper in `state-store.md`.
+
+Note what is **not** there: no `application/`. A store belongs to a bounded context and orchestrates its use cases, so it can never be shared — a kernel with an application layer is a kernel that has started absorbing someone's domain.
 
 The presentation half of the kernel is real UI, and it belongs here because every context renders inside it: a **`Layout`** shell (toolbar, nav, `<router-outlet/>`, footer), app-wide **views** (`home`, `about`, `page-not-found`), cross-cutting components, and **`BaseForm`**. It is UI rather than domain, but it is *shared* UI, so it lives here rather than in any one context.
 

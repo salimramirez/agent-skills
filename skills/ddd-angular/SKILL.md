@@ -3,7 +3,7 @@ name: ddd-angular
 description: Structure an Angular frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of entities and commands, DTOs and assemblers as an anti-corruption layer against the backend API, signal stores, and a presentation layer of views and components. Use when organizing or refactoring an Angular app by business domain rather than by technical type, isolating API contracts from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Angular framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -135,7 +135,13 @@ Read the file that matches the task at hand.
 
 Two things ship as code, because they should come out the same every time:
 
-- **`assets/shared-kernel/`** — the seven base files (`base-entity`, `base-response`, `base-assembler`, `error-handling-enabled-base-type`, `base-api-endpoint`, `base-api`, `base-form`). Copy them into `src/app/shared/` as they are; do not paraphrase them from the docs.
+- **`assets/shared-kernel/`** — the seven base files, already laid out in the layers they belong to. Copy the folder's contents into `src/app/shared/` and they land where their imports expect:
+
+  ```bash
+  cp -R skills/ddd-angular/assets/shared-kernel/ src/app/shared/
+  ```
+
+  Do not paraphrase them from the docs, and do not flatten them — `base-assembler` and `base-api-endpoint` reach `base-entity` through `../domain/model/`.
 - **`scripts/new-context.py`** — scaffolds a whole bounded context wired for one CRUD aggregate, deriving every spelling of the name from two arguments:
 
   ```bash
