@@ -1,0 +1,22 @@
+<h1>__Entities__</h1>
+
+@if (store.loading()) {
+  <p>Loading…</p>
+}
+@if (store.error(); as error) {
+  <p role="alert">{{ error }}</p>
+}
+
+<ul>
+  @for (__entity__ of store.__entities__(); track __entity__.id) {
+    <li>
+      <span>{{ __entity__.name }}</span>
+      <button type="button" (click)="edit__Entity__(__entity__.id)">Edit</button>
+      <button type="button" (click)="delete__Entity__(__entity__.id)">Delete</button>
+    </li>
+  } @empty {
+    <li>No __entities__ yet.</li>
+  }
+</ul>
+
+<button type="button" (click)="navigateToNew()">New __Entity__</button>
