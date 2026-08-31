@@ -15,11 +15,11 @@ naming placeholders, which is the part that is easy to get wrong by hand -- the
 same concept appears as PascalCase, camelCase and kebab-case, singular and
 plural, in file names, class names, API operations and route paths.
 
-Examples:
-    python3 scripts/new-context.py --context ordering --entity Order --into src/app
-    python3 scripts/new-context.py --context catalog --entity MenuItem --into src/app --dry-run
-    python3 scripts/new-context.py --context delivery --entity Courier --plural Couriers --into src/app
-    python3 scripts/new-context.py --context staffing --entity Person --plural People --into src/app
+Examples (run from the root of the Angular app, SKILL being this skill's directory):
+    python3 "$SKILL/scripts/new-context.py" --context ordering --entity Order --into src/app
+    python3 "$SKILL/scripts/new-context.py" --context catalog --entity MenuItem --into src/app --dry-run
+    python3 "$SKILL/scripts/new-context.py" --context delivery --entity Courier --plural Couriers --into src/app
+    python3 "$SKILL/scripts/new-context.py" --context staffing --entity Person --plural People --into src/app
 
 Everything it writes is ordinary code -- read it, then change it. The generated
 entity carries a single `name` field on purpose; model the real thing next.
@@ -29,7 +29,8 @@ import re
 import sys
 from pathlib import Path
 
-TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "assets" / "context-template"
+SKILL_DIR = Path(__file__).resolve().parent.parent
+TEMPLATE_DIR = SKILL_DIR / "assets" / "context-template"
 
 
 def split_words(name):
@@ -121,6 +122,21 @@ def main():
         return 1
 
     destination_root = Path(args.into)
+
+    # Run this from the app, not from the skill. --into is resolved against the
+    # current directory, so running it from the skill folder would quietly
+    # scaffold the context inside the skill instead of inside the app.
+    resolved = destination_root.resolve()
+    if resolved == SKILL_DIR or SKILL_DIR in resolved.parents:
+        print(
+            f"--into resolves to {resolved}, which is inside the skill itself.\n"
+            f"Run this from the root of your Angular app, for example:\n"
+            f'  python3 "{Path(__file__).resolve()}" '
+            f"--context {args.context} --entity {args.entity} --into src/app",
+            file=sys.stderr,
+        )
+        return 1
+
     planned = []
     for source in sorted(p for p in TEMPLATE_DIR.rglob("*") if p.is_file()):
         relative = substitute(str(source.relative_to(TEMPLATE_DIR)), mapping)

@@ -15,12 +15,13 @@ Use this when the task is "add X to the app" — a new bounded context, or a new
 For a new context, generate the tree instead of typing it:
 
 ```bash
-python3 scripts/new-context.py --context ordering --entity Order --into src/app
+SKILL=.claude/skills/ddd-angular       # wherever this skill was installed
+python3 "$SKILL/scripts/new-context.py" --context ordering --entity Order --into src/app
 ```
 
-That writes all four layers wired together for one CRUD aggregate. Everything below then becomes editing rather than authoring — which is the point, since the naming is the error-prone part.
+Run it from the root of the app: `--into` is resolved against the current directory, so running it from the skill folder would scaffold the context inside the skill. That writes all four layers wired together for one CRUD aggregate. Everything below then becomes editing rather than authoring — which is the point, since the naming is the error-prone part.
 
-Copy the shared kernel from `assets/shared-kernel/` first if `src/app/shared/` does not have it yet.
+Copy the shared kernel first if `src/app/shared/` does not have it yet — `cp -R "$SKILL/assets/shared-kernel/" src/app/shared/`, keeping its layers intact. See `shared-kernel.md`.
 
 ## The nine files, in order
 
