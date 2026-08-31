@@ -78,25 +78,27 @@ React decides what to re-render by comparing references. Mutating an entity in p
 
 Note the `[...this.lines]` in `withDeliveryAddress`: `readonly OrderLine[]` is not assignable to the mutable array the constructor accepts, so the copy is deliberate.
 
-## Give the entity behaviour
+## When to put a method on the entity
 
-`isCancellable()` and `itemCount()` are the point of the class. Without them, `Order` is a bag of fields and every component re-derives the same thing:
+Most of the time an entity is fields and nothing else, and that is fine. The client is not where invariants are enforced, so there is no rule here about entities having to "protect themselves" — that argument belongs to the side that owns the data.
+
+Two narrower reasons do apply. The first is **duplication**:
 
 ```tsx
-{/* the same rule, spelled out in three components, drifting apart */}
+{/* the same condition, spelled out in three components, drifting apart */}
 {(order.status === 'PLACED' || order.status === 'CONFIRMED') && <button>Cancel</button>}
 ```
 
-That is the **anemic domain model** — the failure the core section names as the most common in DDD.
+Three copies is three places to update when the backend adds a fourth cancellable status. When an expression reads only off the entity's own fields and appears in more than one place, it belongs on the entity; when it needs two aggregates, it belongs in the store; when it appears once, leave it.
 
-In TypeScript, behaviour buys something extra and concrete. TypeScript's type system is *structural*: an anemic entity is just a shape, so any lookalike object satisfies it — including a raw API resource. Add methods and it no longer does. Passing a resource where an `Order` is expected produces:
+The second reason is specific to TypeScript, and it is the stronger one here. TypeScript's type system is *structural*: an entity that is only fields is only a shape, so any lookalike object satisfies it — including a raw API resource. Add methods and it no longer does. Passing a resource where an `Order` is expected produces:
 
 ```
 TS2739: Type '{ id: number; customer_id: number; … }' is missing the following
 properties from type 'Order': customerId, deliveryAddress, isCancellable, itemCount
 ```
 
-The compiler names the missing *methods*. Entity behaviour is what makes the anti-corruption boundary enforceable rather than merely documented.
+The compiler names the missing *methods*. So on this stack a method or two is what turns "the resource never leaves `infrastructure/`" from a convention you follow into one the compiler checks — which is worth a method even where duplication alone would not be.
 
 ## Nested entities and neighbouring aggregates
 

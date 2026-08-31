@@ -3,7 +3,7 @@ name: ddd-vue
 description: Structure a Vue frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of entity and command classes that carry behaviour, assemblers as an anti-corruption layer against the backend API, Pinia stores, and a presentation layer of views and components. Use when organizing or refactoring a Vue app by business domain rather than by technical type, isolating API payloads from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Vue framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -92,7 +92,7 @@ The rules this skill applies by default. Each one is expanded, with its reason, 
 - **One store per context**, named after the context (`useOrderingStore`), not per entity and not one for the app.
 - **The store is the only thing that calls the gateway, and the only thing that calls an assembler.** Only a gateway touches axios. A view calls its store, and that is the whole chain.
 - **The endpoint returns a raw response, not entities.** `BaseEndpoint` speaks HTTP; turning a response into domain objects is the store's job.
-- **Entities are plain classes with public fields** and one options-object constructor with defaults — and they **carry behaviour**. A rule that reads only off an entity's own fields belongs on the entity.
+- **Entities are plain classes with public fields** and one options-object constructor with defaults. Add a method when an expression that reads only off the entity's own fields would otherwise be repeated across views.
 - **Other aggregates are referenced by id.** Nested entities are hydrated in the constructor; neighbouring aggregates are not.
 - **The raw resource never leaves `infrastructure/`.** Assemblers are the anti-corruption layer; a snake_case field in a template means one was skipped.
 - **CRUD writes send the entity; everything else sends a command.** A command is a class with no id and no defaults.
@@ -115,7 +115,7 @@ Read the file that matches the task at hand.
 
 **Modeling the domain**
 
-- **Entities and commands** — entities that carry behaviour, value objects, and commands for non-CRUD intents. Read [domain-model.md](references/domain-model.md)
+- **Entities and commands** — entities, when a method earns its place on one, value objects, and commands for non-CRUD intents. Read [domain-model.md](references/domain-model.md)
 
 **Talking to the backend**
 

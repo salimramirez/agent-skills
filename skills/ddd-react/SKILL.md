@@ -3,7 +3,7 @@ name: ddd-react
 description: Structure a React frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of immutable entity and command classes that carry behaviour, assemblers as an anti-corruption layer against the backend API, Zustand stores, and a presentation layer of routed views and reusable components. Use when organizing or refactoring a React app by business domain rather than by technical type, isolating API payloads from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, React framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   author: Copyright 2026 Salim Ramirez
 ---
 
@@ -94,7 +94,7 @@ The rules this skill applies by default. Each one is expanded, with its reason, 
 - **One store per context**, named after the context (`useOrderingStore`), not per entity and not one for the app.
 - **The store is the only thing that calls the gateway, and the only thing that calls an assembler.** Only a gateway touches axios. A component calls its store, and that is the whole chain.
 - **The endpoint returns a raw response, not entities.** `BaseEndpoint` speaks HTTP; turning a response into domain objects is the store's job.
-- **Entities are classes with `readonly` fields that carry behaviour.** A rule that reads only off an entity's own fields belongs on the entity — and in TypeScript that behaviour is what makes the anti-corruption boundary a compile error rather than a convention.
+- **Entities are classes with `readonly` fields.** Add a method when an expression would otherwise repeat across components — and note that on this stack a method or two is also what makes the anti-corruption boundary a compile error rather than a convention, because TypeScript compares shapes.
 - **Nothing mutates.** React compares by reference, so a mutated entity renders nothing. Every update replaces; `with…` methods produce new instances.
 - **The store imports nothing from React.** That is what lets a route loader and an axios interceptor read state with `.getState()`.
 - **Other aggregates are referenced by id.** Nested entities are hydrated in the constructor; neighbouring aggregates are not.
@@ -118,7 +118,7 @@ Read the file that matches the task at hand.
 
 **Modeling the domain**
 
-- **Entities and commands** — immutable entities that carry behaviour, value objects, and commands for non-CRUD intents. Read [domain-model.md](references/domain-model.md)
+- **Entities and commands** — immutable entities, when a method earns its place on one, value objects, and commands for non-CRUD intents. Read [domain-model.md](references/domain-model.md)
 
 **Talking to the backend**
 

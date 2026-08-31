@@ -7,7 +7,7 @@ A skill's `description` is the whole trigger mechanism: Claude sees the name and
 ## Running it
 
 ```bash
-python3 evals/ddd-angular/run-trigger-eval.py \
+python3 evals/run-trigger-eval.py \
   --eval-set evals/ddd-angular/trigger-eval.json \
   --project /path/to/a/scratch/angular-app \
   --skill skills/ddd-angular \
@@ -54,6 +54,6 @@ Queries are written the way someone actually types: lowercase, casual, with file
 
 ## Last result
 
-**20/20** against `ddd-angular` 1.1.4 on 2026-08-30 — ten positives triggering it, ten negatives not, at two runs per query. The Spring Boot near-miss went to `ddd-spring-boot` both times, so routing between the siblings holds. That measurement was taken with this script's predecessor, which used the same detection; the first re-run with this file hit a session limit, so a green run of this exact script is still owed.
+**20/20** against `ddd-angular` 1.1.4 on 2026-08-30 — ten positives triggering it, ten negatives not, at two runs per query. The Spring Boot near-miss went to `ddd-spring-boot` both times, so routing between the siblings holds. That measurement was taken with this script's predecessor, which used the same detection. A green run of the committed script is still owed — two attempts have now hit the session limit, which is exactly what exit code 2 exists to make visible. See `evals/frontend-routing/` for the set that tests all three frontend skills against each other.
 
 One thing this run surfaced outside its own scope: the EventStorming query was answered in prose rather than reaching `ddd-playbook`. It passes here (it did not trigger `ddd-angular`), but it hints that `ddd-playbook` may under-trigger on purely strategic work. That needs its own eval set.

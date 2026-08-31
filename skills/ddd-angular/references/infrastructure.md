@@ -89,6 +89,8 @@ Everything the API does that your model should not inherit — naming, nulls, a 
 
 The repository. It declares its URL and its assembler; the operations come from the base class.
 
+Note what that means: **the endpoint returns entities, not responses.** `BaseApiEndpoint` calls the assembler itself, so a store never sees an `HttpResponse`. That is a deliberate choice, and the opposite of what the Vue and React skills in this family do — there the endpoint hands back the raw response and the store assembles. Assembling inside the endpoint buys a store that only ever handles domain objects, and Angular's typed `HttpClient` makes it natural; the cost is that a change to the response envelope reaches into the generic base class rather than staying in one assembler. Either line is defensible. What is not defensible is having no line, and letting some calls assemble and others not.
+
 ```typescript
 // ordering/infrastructure/orders-api-endpoint.ts
 import {HttpClient} from '@angular/common/http';

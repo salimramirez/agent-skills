@@ -1,0 +1,26 @@
+[
+  {"query": "tengo una app angular 20 con todo en src/app/services y src/app/components, unos 40 archivos por carpeta. quiero reorganizarla por área de negocio y no sé qué va en cada capa", "expect": "ddd-angular"},
+  {"query": "en angular, mi OrderStore inyecta el api y además filtra, calcula totales y navega. cómo lo parto sin acabar con 20 servicios sueltos", "expect": "ddd-angular"},
+  {"query": "uso signals en angular y el backend me devuelve customer_id y created_at, que se me han metido hasta en los templates. cómo aíslo eso", "expect": "ddd-angular"},
+  {"query": "cómo reparto un feature de angular en domain, application, infrastructure y presentation, y dónde encajan los signal stores", "expect": "ddd-angular"},
+  {"query": "en angular tengo formularios reactivos que construyen directo el body del post en snake_case. qué debería construir en su lugar", "expect": "ddd-angular"},
+
+  {"query": "tengo una app vue 3 con composition api y pinia, y quiero reorganizarla por bounded contexts en vez de por tipo de archivo", "expect": "ddd-vue"},
+  {"query": "en mi store de pinia estoy asignando response.data directamente al ref. alguien me dijo que eso es un smell, qué debería hacer", "expect": "ddd-vue"},
+  {"query": "vue 3 con script setup: dónde pongo la lógica de negocio y qué va en el store frente a la vista, organizando por dominio", "expect": "ddd-vue"},
+  {"query": "quiero montar una capa anticorrupción entre mi app vue y un proveedor externo cuyo json cambia cada dos por tres", "expect": "ddd-vue"},
+  {"query": "en vue, cómo estructuro un módulo nuevo de facturación con el dominio separado de la UI y las rutas propias del contexto", "expect": "ddd-vue"},
+
+  {"query": "tengo una spa de react con zustand y react router, y quiero reorganizarla por dominio de negocio en lugar de por carpetas de tipo", "expect": "ddd-react"},
+  {"query": "en react, mis componentes hacen fetch directo y mapean el json inline. cómo separo el modelo de la forma que devuelve el api", "expect": "ddd-react"},
+  {"query": "actualizo una entidad en el store de zustand y la pantalla no se refresca. tiene que ver con cómo la modelé?", "expect": "ddd-react"},
+  {"query": "cómo aplico domain driven design en una spa de react con typescript, y dónde deberían vivir las entidades", "expect": "ddd-react"},
+  {"query": "en react quiero proteger unas rutas y que el token se adjunte solo, pero sin que eso se me meta en el dominio", "expect": "ddd-react"},
+
+  {"query": "estoy modelando el agregado Order en spring boot con jpa y no sé si el OrderId como value object embebido compensa frente a un Long", "expect": null},
+  {"query": "vamos a hacer un eventstorming la semana que viene con los de negocio para sacar los bounded contexts. cómo preparo la sesión", "expect": null},
+  {"query": "mi bundle inicial son 2.2 MB y tarda un montón. qué hago con lazy loading y preloading para bajarlo", "expect": null},
+  {"query": "quiero migrar los tests de karma a jest en un monorepo con tres librerías. qué configuración necesito", "expect": null},
+  {"query": "estoy diseñando los endpoints REST de la api de pedidos. debería exponer /orders/{id}/cancel o un PATCH con el status nuevo", "expect": null},
+  {"query": "tengo una app en svelte y quiero organizarla por dominio con capas. cómo estructuro las carpetas", "expect": null}
+]

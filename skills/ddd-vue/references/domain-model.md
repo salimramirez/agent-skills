@@ -95,18 +95,28 @@ Four conventions are doing work here.
 
 **Other aggregates by identity.** `customerId` is a number, not a `Customer`. That is the aggregate rule from the core, and on the client it is also practical: the API returns ids, and holding the object would mean an order could only exist once its neighbour had loaded.
 
-## Give the entity behaviour
+## When to put a method on the entity
 
-`isCancellable()` and `itemCount()` are the point of the class. Without them, `Order` is a bag of fields and every view re-derives the same thing:
+Most of the time an entity is fields and nothing else, and that is fine. The client is not where invariants are enforced, so there is no rule here about entities having to "protect themselves" — that argument belongs to the side that owns the data.
+
+There is a narrower, practical reason to add a method, and it is worth watching for: **the same expression appearing in more than one view.**
 
 ```html
-<!-- the same rule, spelled out in three templates, drifting apart -->
+<!-- the same condition, spelled out in three templates, drifting apart -->
 <button v-if="order.status === 'PLACED' || order.status === 'CONFIRMED'">Cancel</button>
 ```
 
-That is the **anemic domain model** — the failure the core section names as the most common in DDD, and it is easy to fall into here because nothing forces you out of it. The test is simple: when a rule reads only off an entity's own fields, it belongs on the entity. A rule that needs two aggregates belongs in the store.
+Three copies is three places to update when the backend adds a fourth cancellable status, and they will not all get updated. One method fixes that:
 
-Behaviour also covers presentation-shaped questions that are really domain questions — a formatted publication date, a display label, a derived state. Put the method on the entity and let every view call it.
+```javascript
+isCancellable() {
+    return this.status === 'PLACED' || this.status === 'CONFIRMED';
+}
+```
+
+The test is duplication, not doctrine: when an expression reads only off the entity's own fields and appears in more than one place, it belongs on the entity. When it needs two aggregates, it belongs in the store. When it appears once, leave it where it is.
+
+The same goes for a value the view has to derive every time — an item count, a display label, a formatted date the API sends raw. A method costs one line and gives every view the same answer.
 
 ## Value objects
 
