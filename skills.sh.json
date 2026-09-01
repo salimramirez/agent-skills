@@ -1,0 +1,21 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Modeling a domain",
+      "description": "The design rules and the modeling work, stack-agnostic — ubiquitous language, bounded contexts, aggregates and their invariants, context mapping.",
+      "skills": ["ddd-playbook"]
+    },
+    {
+      "title": "Backend",
+      "description": "Writing the model where it is the system of record and owns its invariants.",
+      "skills": ["ddd-spring-boot"]
+    },
+    {
+      "title": "Frontend",
+      "description": "The same four-layer structure on a client, where the backend owns the invariants and the model is a projection of it. Install the one for your framework.",
+      "skills": ["ddd-angular", "ddd-vue", "ddd-react"]
+    }
+  ]
+}
