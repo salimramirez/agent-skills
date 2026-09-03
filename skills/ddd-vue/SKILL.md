@@ -3,7 +3,7 @@ name: ddd-vue
 description: Structure a Vue frontend with Domain-Driven Design — bounded-context feature folders, a domain layer of entity and command classes that carry behaviour, assemblers as an anti-corruption layer against the backend API, Pinia stores, and a presentation layer of views and components. Use when organizing or refactoring a Vue app by business domain rather than by technical type, isolating API payloads from the app's own model, or deciding where business logic belongs on the frontend. It carries the DDD design rules it depends on, so it works on its own. Not for styling, Vue framework how-to, or backend domain modeling.
 license: MIT
 metadata:
-  version: "1.0.2"
+  version: "1.1.0"
   author: Copyright 2026 Salim Ramirez
 ---
 

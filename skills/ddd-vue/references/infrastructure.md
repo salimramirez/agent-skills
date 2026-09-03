@@ -13,6 +13,18 @@ The anti-corruption layer, and the only file that knows both the wire shape and 
 import {Order} from '../domain/model/order.entity.js';
 
 /**
+ * One order exactly as the API sends it, snake case and all.
+ *
+ * @typedef {Object} OrderApiResource
+ * @property {number} id
+ * @property {number} customer_id
+ * @property {Array<{menu_item_id: number, quantity: number}>} lines
+ * @property {string} delivery_address
+ * @property {string} status
+ * @property {number} total
+ */
+
+/**
  * Anti-corruption layer between the orders API and the ordering model.
  *
  * @class OrderAssembler
@@ -21,7 +33,7 @@ export class OrderAssembler {
     /**
      * Builds one entity from a resource payload.
      *
-     * @param {Object} resource - Resource as the API returned it.
+     * @param {OrderApiResource} resource - Resource as the API returned it.
      * @returns {Order} The entity the rest of the app works with.
      */
     static toEntityFromResource(resource) {
@@ -53,7 +65,9 @@ export class OrderAssembler {
 
 Everything the API does that your model should not inherit — snake case, a flattened field, a date as a string, a null where the domain wants a default — is absorbed in these two methods. This is the most valuable file in the layer: when the backend renames a field, exactly one file changes.
 
-Two details worth copying deliberately:
+**Write the wire shape as a `@typedef`.** It is the one thing in the codebase with no runtime declaration behind it: an entity has its constructor, a prop has `defineProps`, but the resource is whatever arrived over the network. Naming it is what makes a mistyped wire field — `resource.customerId` where the API sends `customer_id` — an error the editor reports, rather than an `undefined` that reaches a view and renders blank. This is the one place where spelling a shape out in JSDoc buys something that shorter code cannot.
+
+Two more details worth copying deliberately:
 
 - **`toEntitiesFromResponse` accepts a bare array or an envelope.** A mock server that returns `[…]` and a real backend that returns `{ orders: […] }` both work without touching the store.
 - **A non-200 yields an empty collection, not a throw.** The store's `.catch` already records transport failures; a view rendering nothing beats a view that crashes. If a failed read must be visible, push to `errors` in the store rather than throwing from here.
