@@ -18,9 +18,9 @@ The design rules and the modeling work, stack-agnostic.
 
 ### `ddd-spring-boot` — writing it in Spring Boot / Java
 
-The four-layer package structure, the shared kernel, value objects and typed ids as JPA embeddables, aggregate roots as JPA entities with real behavior, commands and queries as records with their command and query services, repositories, domain events, anti-corruption layers, the REST interface with resources and assemblers, and domain exceptions.
+The four-layer package structure, the shared kernel, value objects as JPA embeddables, aggregate roots as JPA entities with real behavior, commands and queries as records with their command and query services, repositories, domain events, anti-corruption layers, the REST interface with resources and assemblers, state transitions as sub-resources, domain exceptions, and an identity context.
 
-Works on Spring Boot 3 and 4 with Java 17+.
+It is deliberately **opinionated**: for every decision it names one convention — the naming table, where the service interfaces live, what `handle` returns, which exception means what, the Javadoc shape — and says what that convention buys, rather than listing options. It also ships code: `assets/shared-kernel/` holds the six classes every context shares, `scripts/new-context.py` scaffolds a whole bounded context from a context and an entity name, and `assets/iam-context/` is a complete sign-up / sign-in / JWT context to install and adapt. Everything shipped was compiled and run on Spring Boot 3.5 and 4.0.
 
 ### `ddd-angular` — writing it in Angular
 

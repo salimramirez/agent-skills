@@ -1,80 +1,127 @@
-# Interfaces (REST)
+# REST: resources, assemblers, controllers
 
-The inbound REST adaptor: resources, assemblers, and controllers.
+The inbound adaptor: what crosses the wire, how it becomes a command, and how an aggregate becomes a response.
 
-The interfaces layer is where the outside drives the context, and it has three parts:
+The `interfaces/rest` package of a context has three parts, and the flow through them is always the same:
 
-- **`resources`** — the request and response DTOs (records); the public API contract, with no domain types.
-- **`transform`** — small static assemblers, one per direction: a request resource → a command, and an entity → a response resource.
-- the **controller** (in `interfaces/rest/controllers`) — a thin orchestrator that wires resources and assemblers to the command and query services.
+**resource → assembler → command → command service → id → query service → aggregate → assembler → resource**
 
-**Resources** validate their input (request) and expose only what the API returns (response):
+## Resources are records of primitives
+
+A request resource validates its own presence rules in the compact constructor; a response resource is a plain record. Neither mentions a domain type:
 
 ```java
-// interfaces/rest/resources
-public record PlaceOrderResource(Long customerId, List<OrderLineResource> lines) {
-    public PlaceOrderResource {
-        if (customerId == null) throw new IllegalArgumentException("customerId is required");
-        if (lines == null || lines.isEmpty()) throw new IllegalArgumentException("at least one line is required");
+public record CreateOrderResource(String customerEmail, String currency) {
+    public CreateOrderResource {
+        if (customerEmail == null || customerEmail.isBlank()) {
+            throw new IllegalArgumentException("Customer email is required");
+        }
+        if (currency == null || currency.isBlank()) {
+            throw new IllegalArgumentException("Currency is required");
+        }
     }
 }
-public record OrderLineResource(Long itemId, int quantity) { }
 
-public record OrderResource(Long id, Long customerId, String status, BigDecimal total) { }
+public record OrderResource(Long id, String code, Long customerId, String status, String currency,
+                            BigDecimal total, List<OrderLineResource> lines) {
+}
 ```
 
-**Transformers** are static assemblers — one turns a request resource into a command (translating wire types into domain value objects), the other turns an entity into a response resource:
+When Jackson builds a `CreateOrderResource` from the body and the constructor throws, the `IllegalArgumentException` reaches the shared `GlobalExceptionHandler` — Spring looks through the causes of the deserialization failure — and the client gets a 400 with `"detail": "Customer email is required"`. No `@Valid` needed. Bean Validation (`@Valid @RequestBody`, `@NotBlank` on the components) is the other way to get the same 400 and is fine when the messages must be localized; do not mix the two on one resource.
+
+## Assemblers are static, one per direction
 
 ```java
-// interfaces/rest/transform
-public class PlaceOrderCommandFromResourceAssembler {
-    public static PlaceOrderCommand toCommandFromResource(PlaceOrderResource resource) {
-        var lines = resource.lines().stream()
-            .map(line -> new OrderLine(new ItemId(line.itemId()), line.quantity()))
-            .toList();
-        return new PlaceOrderCommand(new CustomerId(resource.customerId()), lines);
+public class CreateOrderCommandFromResourceAssembler {
+    public static CreateOrderCommand toCommandFromResource(CreateOrderResource resource) {
+        return new CreateOrderCommand(resource.customerEmail(), Currency.getInstance(resource.currency()));
     }
 }
 
 public class OrderResourceFromEntityAssembler {
-    public static OrderResource toResourceFromEntity(Order order) {
-        return new OrderResource(order.getId().value(), order.getCustomerId().value(),
-                order.getStatus().name(), order.total().amount());
+    public static OrderResource toResourceFromEntity(Order entity) {
+        var lines = entity.getLines().stream()
+                .map(OrderLineResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+        return new OrderResource(entity.getId(), entity.getCode().code(), entity.getCustomerId().customerId(),
+                entity.getStatus().name().toLowerCase(), entity.getCurrency().getCurrencyCode(),
+                entity.total().amount(), lines);
     }
 }
 ```
 
-**The controller** turns a request resource into a command, handles it, and — for a write — *queries* the result to build the response. It holds no business logic, and no domain types appear in its signatures.
+The resource-to-command assembler is where wire primitives become value objects (`Currency.getInstance`, `new MenuItemId(...)`, `new Money(...)`); the entity-to-resource assembler is where value objects become primitives again. Nothing else does either conversion. When the command needs something the body does not carry — the id from the path, the order's currency to price a line — the assembler takes it as an extra argument: `toCommandFromResource(orderId, currency, resource)`.
+
+## The controller
 
 ```java
-// interfaces/rest/controllers
 @RestController
-@RequestMapping("/api/v1/orders")
-class OrdersController {
+@RequestMapping(value = "/api/v1/orders", produces = APPLICATION_JSON_VALUE)
+@Tag(name = "Orders", description = "Available Order Endpoints")
+public class OrdersController {
     private final OrderCommandService orderCommandService;
     private final OrderQueryService orderQueryService;
 
-    OrdersController(OrderCommandService orderCommandService, OrderQueryService orderQueryService) {
+    public OrdersController(OrderCommandService orderCommandService, OrderQueryService orderQueryService) {
         this.orderCommandService = orderCommandService;
         this.orderQueryService = orderQueryService;
     }
 
     @PostMapping
-    ResponseEntity<OrderResource> placeOrder(@RequestBody PlaceOrderResource resource) {
-        var command = PlaceOrderCommandFromResourceAssembler.toCommandFromResource(resource);
-        var orderId = orderCommandService.handle(command);
-        return orderQueryService.handle(new GetOrderByIdQuery(orderId))
-            .map(order -> new ResponseEntity<>(OrderResourceFromEntityAssembler.toResourceFromEntity(order), HttpStatus.CREATED))
-            .orElseGet(() -> ResponseEntity.notFound().build());
+    @Operation(summary = "Create a draft order", description = "Create a draft order for a customer, priced in one currency")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Order created"),
+            @ApiResponse(responseCode = "400", description = "Invalid input"),
+            @ApiResponse(responseCode = "404", description = "Customer not found")})
+    public ResponseEntity<OrderResource> createOrder(@RequestBody CreateOrderResource resource) {
+        var createOrderCommand = CreateOrderCommandFromResourceAssembler.toCommandFromResource(resource);
+        var orderId = orderCommandService.handle(createOrderCommand);
+        if (orderId == null || orderId == 0L) return ResponseEntity.badRequest().build();
+        var getOrderByIdQuery = new GetOrderByIdQuery(orderId);
+        var order = orderQueryService.handle(getOrderByIdQuery);
+        if (order.isEmpty()) return ResponseEntity.notFound().build();
+        var orderEntity = order.get();
+        var orderResource = OrderResourceFromEntityAssembler.toResourceFromEntity(orderEntity);
+        return new ResponseEntity<>(orderResource, HttpStatus.CREATED);
     }
 
     @GetMapping("/{orderId}")
-    ResponseEntity<OrderResource> getOrderById(@PathVariable Long orderId) {
-        return orderQueryService.handle(new GetOrderByIdQuery(new OrderId(orderId)))
-            .map(order -> ResponseEntity.ok(OrderResourceFromEntityAssembler.toResourceFromEntity(order)))
-            .orElseGet(() -> ResponseEntity.notFound().build());
+    @Operation(summary = "Get order by id", description = "Get order by id")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order found"),
+            @ApiResponse(responseCode = "404", description = "Order not found")})
+    public ResponseEntity<OrderResource> getOrderById(@PathVariable Long orderId) {
+        var getOrderByIdQuery = new GetOrderByIdQuery(orderId);
+        var order = orderQueryService.handle(getOrderByIdQuery);
+        if (order.isEmpty()) return ResponseEntity.notFound().build();
+        var orderEntity = order.get();
+        var orderResource = OrderResourceFromEntityAssembler.toResourceFromEntity(orderEntity);
+        return ResponseEntity.ok(orderResource);
+    }
+
+    @GetMapping
+    @Operation(summary = "Get all orders", description = "Get all orders, or only those of a customer")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Orders found")})
+    public ResponseEntity<List<OrderResource>> getAllOrders(
+            @Parameter(description = "Customer id to filter by") @RequestParam(required = false) Long customerId) {
+        var orders = customerId == null
+                ? orderQueryService.handle(new GetAllOrdersQuery())
+                : orderQueryService.handle(new GetAllOrdersByCustomerIdQuery(new CustomerId(customerId)));
+        var orderResources = orders.stream()
+                .map(OrderResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+        return ResponseEntity.ok(orderResources);
     }
 }
 ```
 
-The flow runs end to end: **resource → (assembler) → command → command service → id → query service → entity → (assembler) → resource**. After a write the controller re-queries, so the response reflects the stored state.
+The rules the controller follows:
+
+- **A write re-queries.** `createOrder` gets an id back and asks the query service for the aggregate, so the response is what was stored — not what the controller thinks it sent. It also keeps the command service's return type an id, not a resource.
+- **`Optional` is unwrapped in two lines**: `if (order.isEmpty()) return ResponseEntity.notFound().build();` then `var orderEntity = order.get();`. The `.map(...).orElseGet(...)` chain is shorter and reads worse once there are three steps.
+- **Status codes**: 201 with the body for a create, 200 for a read and an update, 404 when a read finds nothing, and **200 with `[]`** when a collection is empty — an empty list is a successful answer, not a missing resource. 400 and 409 come from the exception advice; the one 400 a controller writes itself is the guard on a `null` or `0L` id after a create, which a command service that could not create anything would return.
+- **Filtering is a query parameter on the collection**, `GET /api/v1/orders?customerId=1`, dispatched to the matching query. A parameter that is not a filter but a different resource gets its own path instead.
+- **The controller holds no logic and no repository.** It names the two services in its constructor and nothing else.
+
+Update and delete follow the same shape — `@PutMapping("/{orderId}")` returning the updated resource, `@DeleteMapping("/{orderId}")` returning a `MessageResource` — and the generated context template writes both. The update handler returns `Optional<Order>`, so the controller unwraps it like a query result; in the house implementation a missing id throws `OrderNotFoundException` before that point, and the `isEmpty()` branch is the guard for a handler that has nothing to save. Transitions and nested resources are in `state-transitions.md`.

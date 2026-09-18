@@ -1,40 +1,60 @@
-# Repositories, identity, and persistence
+# Repositories and persistence
 
-Repositories for aggregate roots, and the identity and persistence trade-offs behind them.
-
-Give each aggregate root a repository — collection-like access to whole aggregates by their root, one per aggregate root. The simplest and most common approach in Spring is to define a Spring Data repository **in `infrastructure`** and let command and query services depend on it directly:
+One Spring Data repository per aggregate root, in `infrastructure`, with finders in the ubiquitous language.
 
 ```java
-// infrastructure/persistence/jpa/repositories
 @Repository
-public interface OrderRepository extends JpaRepository<Order, OrderId> {
-    Optional<Order> findByCustomerId(CustomerId customerId);   // finders named in the ubiquitous language
+public interface OrderRepository extends JpaRepository<Order, Long> {
+    Optional<Order> findByCode(OrderCode code);
+    List<Order> findAllByCustomerId(CustomerId customerId);
 }
 ```
 
-`JpaRepository` gives you `save`, `findById`, and the rest; add finders named in the domain's language, and keep them about whole aggregates (not arbitrary inner entities). The trade-off is that the application layer now depends on an infrastructure type.
+That is the whole file. `JpaRepository` supplies `save`, `findById`, `findAll`, `existsById` and `deleteById`; the interface adds only what the domain asks for, named as the domain would say it.
 
-> **Alternative — a domain port.** To keep the domain *and* the application free of any dependency on the persistence framework, declare a plain repository interface in the `domain` layer as a **port**, implemented in `infrastructure`:
->
-> ```java
-> // domain/repositories — no framework leakage
-> public interface OrderRepository {
->     Optional<Order> findById(OrderId id);
->     Order save(Order order);
-> }
->
-> // infrastructure — Spring Data satisfies the port
-> interface OrderJpaRepository extends JpaRepository<Order, OrderId>, OrderRepository { }
-> ```
->
-> This is the purer, hexagonal-style choice; the cost is a little more indirection. Prefer it when isolating the domain from infrastructure matters for the project.
+## Finders take value objects
 
-## Identity and persistence: choices and trade-offs
+A finder's parameter is the value object, not what is inside it: `findByCode(OrderCode code)`, `findAllByCustomerId(CustomerId customerId)`, `existsByEmailAddress(EmailAddress emailAddress)`. Spring Data matches the embedded record's columns by itself. This keeps the query service from unwrapping anything, and it means a caller cannot pass the wrong `Long` — a `MenuItemId` does not fit where a `CustomerId` goes.
 
-Three honest choices, each with a primary recommendation and a common alternative:
+The uniqueness pair every create/update needs:
 
-- **Identity — typed id vs. surrogate base class.** *Primary:* a typed id value object (`OrderId` as `@EmbeddedId`) keeps identity a domain concept and type-safe. *Alternative (very common):* the shared `AuditableAbstractAggregateRoot` base class with a generated `Long` surrogate id and audit timestamps (see `shared-kernel.md`); even then, keep typed id value objects for *cross-aggregate references* (`CustomerId`, not bare `Long`).
-- **Repository — infrastructure-only vs. domain port.** Covered above: the default here is a Spring Data repository in `infrastructure` that services use directly (simplest, and the common convention); declare a domain port instead when you want the persistence dependency kept out of the domain.
-- **Domain purity — JPA in the domain.** Annotating domain entities with JPA (as shown) is idiomatic and fine for most projects; the cost is a soft dependency on the persistence framework. For maximum isolation, keep the domain as plain Java and map to a separate persistence model in `infrastructure`, at the cost of mapping boilerplate.
+```java
+    boolean existsByName(String name);
+    boolean existsByNameAndIdIsNot(String name, Long id);
+```
 
-Whichever you pick, hold the non-negotiables: business rules and invariants stay in the domain model, and the domain never depends on `interfaces` or `application`.
+The second one is what an update uses, so that renaming an aggregate to its own current name is not a collision.
+
+Derived query names are checked when the application starts: a method whose name does not match any property fails the boot, not the first request. That is the test.
+
+## Where the repository sits, and why
+
+The repository interface lives in `infrastructure/persistence/jpa/repositories`, and the command and query services in `application` depend on it directly. That is a deliberate shortcut: it saves an interface in the domain plus an adapter class per aggregate, at the price of the application layer naming a Spring Data type.
+
+The purer arrangement declares the port in the domain and lets Spring Data satisfy it:
+
+```java
+// domain/repositories
+public interface OrderRepository {
+    Optional<Order> findById(Long id);
+    Order save(Order order);
+}
+
+// infrastructure/persistence/jpa/repositories
+public interface OrderJpaRepository extends JpaRepository<Order, Long>, OrderRepository {
+}
+```
+
+Take it when the domain must compile with no Spring on the classpath, or when a second persistence mechanism is a real prospect. Otherwise the shortcut is the convention, and the non-negotiables hold either way: the repository is about whole aggregates, the domain classes never call it, and there is one per aggregate root — no `OrderLineRepository`, because a line is saved through its order.
+
+## Tables
+
+`spring.jpa.hibernate.ddl-auto=update` creates the tables from the entities on first run, using the naming strategy from the shared kernel:
+
+```
+Order          → orders          (id, created_at, updated_at, code, currency, customer_id, status)
+OrderLine      → order_lines     (id, created_at, updated_at, order_id, menu_item_id, quantity, unit_price_amount, unit_price_currency)
+Customer       → customers       (…, first_name, last_name, email_address)
+```
+
+Every embedded record becomes columns of the owner's table, named after the record's components — which is why a component is called `customerId` and not `value`. `@Column(unique = true)` on a field asks the database to guarantee a uniqueness as well; whatever `update` does not create for a table that already exists goes in a migration once the schema matters. Until then the `existsBy…` guards in the command services are the uniqueness rule.
