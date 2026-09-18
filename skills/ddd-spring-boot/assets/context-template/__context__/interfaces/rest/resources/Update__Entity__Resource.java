@@ -1,7 +1,7 @@
 package __base_package__.__context__.interfaces.rest.resources;
 
 /**
- * Update __entity__ resource.
+ * Update __entity words__ resource.
  */
 public record Update__Entity__Resource(String name) {
     /**

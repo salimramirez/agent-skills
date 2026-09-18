@@ -1,18 +1,18 @@
 package __base_package__.__context__.domain.model.commands;
 
 /**
- * Command to update a __entity__
- * @param __entity__Id the __entity__ id.
+ * Command to update __a_entity__
+ * @param __entity__Id the __entity words__ id.
  *                     Cannot be null or less than 1
- * @param name the __entity__ name.
+ * @param name the __entity words__ name.
  *             Cannot be null or blank
  */
 public record Update__Entity__Command(Long __entity__Id, String name) {
     /**
      * Constructor
-     * @param __entity__Id the __entity__ id.
+     * @param __entity__Id the __entity words__ id.
      *                     Cannot be null or less than 1
-     * @param name the __entity__ name.
+     * @param name the __entity words__ name.
      *             Cannot be null or blank
      * @throws IllegalArgumentException if __entity__Id is null or less than 1
      * @throws IllegalArgumentException if name is null or blank

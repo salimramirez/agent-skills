@@ -8,7 +8,7 @@ import lombok.Getter;
 /**
  * __Entity__ aggregate root
  * @summary
- * This aggregate root represents a __entity__. The generated version carries a single
+ * This aggregate root represents __a_entity__. The generated version carries a single
  * {@code name}; replace it with the real attributes, in the language the domain experts use,
  * and put the rules that protect them in methods here.
  * @since 1.0
@@ -26,8 +26,8 @@ public class __Entity__ extends AuditableAbstractAggregateRoot<__Entity__> {
     }
 
     /**
-     * Create a new __entity__ with information from the command
-     * @param command The command to create the __entity__
+     * Create __a_entity__ with information from the command
+     * @param command The command to create the __entity words__
      * @see Create__Entity__Command
      */
     public __Entity__(Create__Entity__Command command) {
@@ -35,9 +35,9 @@ public class __Entity__ extends AuditableAbstractAggregateRoot<__Entity__> {
     }
 
     /**
-     * Update the information of the __entity__
+     * Update the information of the __entity words__
      * @param name The new name
-     * @return The updated __entity__
+     * @return The updated __entity words__
      */
     public __Entity__ updateInformation(String name) {
         this.name = name;

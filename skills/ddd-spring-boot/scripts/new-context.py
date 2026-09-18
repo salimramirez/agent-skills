@@ -95,6 +95,10 @@ def replacements(package, context, entity, plural):
         "__Entities__": pascal(plural_words),
         "__entities__": camel(plural_words),
         "__entities-kebab__": kebab(plural_words),
+        # Prose: "menu item", "menu items", and "a menu item" / "an order".
+        "__entity words__": " ".join(entity_words),
+        "__entities words__": " ".join(plural_words),
+        "__a_entity__": ("an " if entity_words[0][0] in "aeiou" else "a ") + " ".join(entity_words),
     }
 
 

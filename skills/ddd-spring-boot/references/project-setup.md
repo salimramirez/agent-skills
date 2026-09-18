@@ -77,7 +77,7 @@ spring.datasource.password=${QUICKBITE_MYSQL_PWD}
 spring.jpa.show-sql=true
 ```
 
-`application-prod.properties` has the real host, `show-sql=false`, and every credential read from the environment. Run locally with `SPRING_PROFILES_ACTIVE=dev QUICKBITE_MYSQL_PWD=… ./mvnw spring-boot:run`.
+`application-prod.properties` has the real host, `show-sql=false`, and every credential read from the environment. Run locally with `SPRING_PROFILES_ACTIVE=dev QUICKBITE_MYSQL_PWD=… ./mvnw spring-boot:run`. With the variable unset the application refuses to start — `Profile '${SPRING_PROFILES_ACTIVE}' must contain a letter…` — which is the point: nobody runs it against a database by accident.
 
 Three of these lines carry a decision worth knowing:
 

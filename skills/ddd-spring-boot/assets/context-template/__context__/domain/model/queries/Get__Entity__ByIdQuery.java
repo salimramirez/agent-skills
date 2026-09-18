@@ -1,14 +1,14 @@
 package __base_package__.__context__.domain.model.queries;
 
 /**
- * Query to get a __entity__ by id.
- * @param __entity__Id the __entity__ id.
+ * Query to get __a_entity__ by id.
+ * @param __entity__Id the __entity words__ id.
  *                     Cannot be null or less than 1
  */
 public record Get__Entity__ByIdQuery(Long __entity__Id) {
     /**
      * Constructor
-     * @param __entity__Id the __entity__ id.
+     * @param __entity__Id the __entity words__ id.
      *                     Cannot be null or less than 1
      * @throws IllegalArgumentException if __entity__Id is null or less than 1
      */

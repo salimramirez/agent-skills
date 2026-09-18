@@ -1,7 +1,7 @@
 package __base_package__.__context__.interfaces.rest.resources;
 
 /**
- * Create __entity__ resource.
+ * Create __entity words__ resource.
  */
 public record Create__Entity__Resource(String name) {
     /**

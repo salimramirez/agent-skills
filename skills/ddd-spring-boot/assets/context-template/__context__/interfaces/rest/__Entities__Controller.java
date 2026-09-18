@@ -27,7 +27,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 /**
  * __Entities__Controller
  * <p>
- *     All __entity__ related endpoints.
+ *     All __entity words__ related endpoints.
  * </p>
  */
 @RestController
@@ -49,13 +49,13 @@ public class __Entities__Controller {
     }
 
     /**
-     * Create a new __entity__
+     * Create __a_entity__
      *
      * @param resource The {@link Create__Entity__Resource} instance
-     * @return The {@link __Entity__Resource} resource for the created __entity__
+     * @return The {@link __Entity__Resource} resource for the created __entity words__
      */
     @PostMapping
-    @Operation(summary = "Create a new __entity__", description = "Create a new __entity__")
+    @Operation(summary = "Create __a_entity__", description = "Create __a_entity__")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "__Entity__ created"),
             @ApiResponse(responseCode = "400", description = "Invalid input")})
@@ -72,13 +72,13 @@ public class __Entities__Controller {
     }
 
     /**
-     * Get __entity__ by id
+     * Get __entity words__ by id
      *
      * @param __entity__Id The __entity__ id
-     * @return The {@link __Entity__Resource} resource for the __entity__
+     * @return The {@link __Entity__Resource} resource for the __entity words__
      */
     @GetMapping("/{__entity__Id}")
-    @Operation(summary = "Get __entity__ by id", description = "Get __entity__ by id")
+    @Operation(summary = "Get __entity words__ by id", description = "Get __entity words__ by id")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "__Entity__ found"),
             @ApiResponse(responseCode = "404", description = "__Entity__ not found")})
@@ -92,12 +92,12 @@ public class __Entities__Controller {
     }
 
     /**
-     * Get all __entities__
+     * Get all __entities words__
      *
-     * @return The list of {@link __Entity__Resource} resources for all __entities__
+     * @return The list of {@link __Entity__Resource} resources for all __entities words__
      */
     @GetMapping
-    @Operation(summary = "Get all __entities__", description = "Get all __entities__")
+    @Operation(summary = "Get all __entities words__", description = "Get all __entities words__")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "__Entities__ found")})
     public ResponseEntity<List<__Entity__Resource>> getAll__Entities__() {
@@ -109,14 +109,14 @@ public class __Entities__Controller {
     }
 
     /**
-     * Update __entity__
+     * Update __entity words__
      *
      * @param __entity__Id The __entity__ id
      * @param resource The {@link Update__Entity__Resource} instance
-     * @return The {@link __Entity__Resource} resource for the updated __entity__
+     * @return The {@link __Entity__Resource} resource for the updated __entity words__
      */
     @PutMapping("/{__entity__Id}")
-    @Operation(summary = "Update __entity__", description = "Update __entity__")
+    @Operation(summary = "Update __entity words__", description = "Update __entity words__")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "__Entity__ updated"),
             @ApiResponse(responseCode = "400", description = "Invalid input"),
@@ -131,13 +131,13 @@ public class __Entities__Controller {
     }
 
     /**
-     * Delete __entity__
+     * Delete __entity words__
      *
      * @param __entity__Id The __entity__ id
-     * @return The message for the deleted __entity__
+     * @return The message for the deleted __entity words__
      */
     @DeleteMapping("/{__entity__Id}")
-    @Operation(summary = "Delete __entity__", description = "Delete __entity__")
+    @Operation(summary = "Delete __entity words__", description = "Delete __entity words__")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "__Entity__ deleted"),
             @ApiResponse(responseCode = "404", description = "__Entity__ not found")})

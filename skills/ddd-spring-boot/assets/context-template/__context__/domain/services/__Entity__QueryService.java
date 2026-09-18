@@ -9,21 +9,21 @@ import java.util.Optional;
 
 /**
  * __Entity__QueryService
- * Service that handles __entity__ queries
+ * Service that handles __entity words__ queries
  */
 public interface __Entity__QueryService {
     /**
-     * Handle a get __entity__ by id query
-     * @param query The get __entity__ by id query containing the __entity__ id
-     * @return The __entity__, if it exists
+     * Handle a get __entity words__ by id query
+     * @param query The get __entity words__ by id query containing the __entity words__ id
+     * @return The __entity words__, if it exists
      * @see Get__Entity__ByIdQuery
      */
     Optional<__Entity__> handle(Get__Entity__ByIdQuery query);
 
     /**
-     * Handle a get all __entities__ query
-     * @param query The get all __entities__ query
-     * @return The list of __entities__
+     * Handle a get all __entities words__ query
+     * @param query The get all __entities words__ query
+     * @return The list of __entities words__
      * @see GetAll__Entities__Query
      */
     List<__Entity__> handle(GetAll__Entities__Query query);
