@@ -8,8 +8,11 @@ The asset is copied as it is under <into>/<base package as a path>/, with the
 package placeholder replaced by the project's base package -- the package of the
 class annotated with @SpringBootApplication, found by scanning <into>. Pass
 --package when there is no such class yet, or to override what was found.
+A relative <into> is looked for under the current directory first and then under
+the nearest parent that holds a pom.xml or build.gradle, so the script works from
+any directory of the project.
 
-Examples (run from the root of the Spring Boot project, SKILL being this skill's directory):
+Examples (run from anywhere inside the Spring Boot project, SKILL being this skill's directory):
     python3 "$SKILL/scripts/install.py" shared-kernel
     python3 "$SKILL/scripts/install.py" shared-kernel --into src/main/java --dry-run
     python3 "$SKILL/scripts/install.py" iam-context --package com.quickbite.platform
@@ -76,6 +79,31 @@ Four things the installer cannot do for you:
 }
 
 
+PROJECT_MARKERS = ("pom.xml", "build.gradle", "build.gradle.kts")
+
+
+def locate_source_root(into):
+    """Resolve --into against the current directory, or against the project root above it.
+
+    A relative --into that does not exist here is looked for under each parent
+    directory that holds a Maven or Gradle build file, so the scripts work from
+    anywhere inside the project. Returns (path, None) or (None, message).
+    """
+    given = Path(into)
+    if given.is_absolute() or given.is_dir():
+        return given, None
+    for parent in Path.cwd().parents:
+        if any((parent / marker).is_file() for marker in PROJECT_MARKERS):
+            candidate = parent / given
+            if candidate.is_dir():
+                return candidate, None
+            break
+    return None, (
+        f"{given} does not exist under the current directory, and no project root above it has it.\n"
+        f"Run this from inside your Spring Boot project, or pass --into with the path to its sources."
+    )
+
+
 def detect_package(root):
     """Return the package of the @SpringBootApplication class under root, or None."""
     for source in sorted(root.rglob("*.java")):
@@ -110,7 +138,10 @@ def main():
         print(f"Asset directory not found: {asset_dir}", file=sys.stderr)
         return 1
 
-    source_root = Path(args.into)
+    source_root, problem = locate_source_root(args.into)
+    if problem:
+        print(problem, file=sys.stderr)
+        return 1
 
     # Run this from the project, not from the skill. --into is resolved against
     # the current directory, so running it from the skill folder would quietly
@@ -119,7 +150,7 @@ def main():
     if resolved == SKILL_DIR or SKILL_DIR in resolved.parents:
         print(
             f"--into resolves to {resolved}, which is inside the skill itself.\n"
-            f"Run this from the root of your Spring Boot project, for example:\n"
+            f"Run this from inside your Spring Boot project, for example:\n"
             f'  python3 "{Path(__file__).resolve()}" {args.asset} --into src/main/java',
             file=sys.stderr,
         )

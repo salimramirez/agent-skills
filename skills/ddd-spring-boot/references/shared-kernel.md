@@ -11,7 +11,7 @@ SKILL=.claude/skills/ddd-spring-boot       # wherever this skill was installed
 python3 "$SKILL/scripts/install.py" shared-kernel
 ```
 
-Run it from the root of the project. It finds the base package by reading the class annotated with `@SpringBootApplication` under `src/main/java`, writes the six files under `<base package>/shared/`, and then prints the four edits it cannot make: the dependencies, the properties, `@EnableJpaAuditing`, and the reminder above. `project-setup.md` shows every one of them in place.
+Run it from anywhere inside the project. It finds the base package by reading the class annotated with `@SpringBootApplication` under `src/main/java`, writes the six files under `<base package>/shared/`, and then prints the four edits it cannot make: the dependencies, the properties, `@EnableJpaAuditing`, and the reminder above. `project-setup.md` shows every one of them in place.
 
 ## What each file is
 

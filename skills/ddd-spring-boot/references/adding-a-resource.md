@@ -19,7 +19,7 @@ SKILL=.claude/skills/ddd-spring-boot       # wherever this skill was installed
 python3 "$SKILL/scripts/new-context.py" --context ordering --entity Order
 ```
 
-Run it from the root of the project. It reads the base package from the `@SpringBootApplication` class, writes the twenty files of a CRUD aggregate under `src/main/java/<base package>/ordering/`, and tells you what it could not do. The naming — PascalCase and camelCase, singular and plural, class, package and path — is the error-prone part, and it is the part that is now done.
+Run it from anywhere inside the project — `src/main/java` is resolved against the directory that holds `pom.xml`. It reads the base package from the `@SpringBootApplication` class, writes the twenty files of a CRUD aggregate under `src/main/java/<base package>/ordering/`, and tells you what it could not do. The naming — PascalCase and camelCase, singular and plural, class, package and path — is the error-prone part, and it is the part that is now done.
 
 Install the shared kernel first if `<base package>/shared/` is not there yet: `python3 "$SKILL/scripts/install.py" shared-kernel`. See `shared-kernel.md`.
 

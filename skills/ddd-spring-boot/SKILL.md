@@ -129,13 +129,13 @@ The rules above are stack-agnostic. Everything below is how Spring Boot expresse
 
 Three things ship as code, because they should come out the same every time.
 
-**Run every command from the root of the Spring Boot project**, with `$SKILL` pointing at the directory this skill was installed into — `.claude/skills/ddd-spring-boot` in a standard install:
+**Run the commands from anywhere inside the Spring Boot project**, with `$SKILL` pointing at the directory this skill was installed into — `.claude/skills/ddd-spring-boot` in a standard install:
 
 ```bash
 SKILL=.claude/skills/ddd-spring-boot
 ```
 
-Each script finds the base package by reading the class annotated with `@SpringBootApplication` under `src/main/java`, and refuses to write inside the skill itself. Add `--dry-run` to see what would be written, `--package` to override the base package, `--into` when the sources are not under `src/main/java`.
+Each script resolves `src/main/java` against the project root — the directory above the current one that holds `pom.xml` or `build.gradle` — finds the base package by reading the class annotated with `@SpringBootApplication` there, and refuses to write inside the skill itself or outside a project. Add `--dry-run` to see what would be written, `--package` to override the base package, `--into` when the sources are not under `src/main/java`.
 
 - **`assets/shared-kernel/`** — the six classes of the shared kernel. Install them first:
 
