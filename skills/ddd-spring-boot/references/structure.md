@@ -1,46 +1,90 @@
-# Package structure: the four layers
+# Package structure
 
-The package tree for a bounded context, and what belongs in each layer.
+The package tree of a bounded context, the naming table, and where the shared kernel sits.
 
-Give each **bounded context** its own package, split into the four layers, with dependencies pointing inward toward `domain`. A common, consistent layout:
+## One package per bounded context, four layers inside
+
+Every bounded context is a package under the base package, and every one of them has the same four layers with the same sub-packages. Dependencies point inward: `interfaces` and `infrastructure` know `application` and `domain`; `application` knows `domain`; `domain` knows nothing outside itself.
 
 ```
-com.quickbite.ordering
-├── interfaces                     // inbound adaptors — the outside drives the context
-│   ├── rest
-│   │   ├── controllers            // REST controllers
-│   │   ├── resources              // request/response DTOs (records)
-│   │   └── transform              // assemblers: resource <-> command / entity
-│   └── acl                // facade this context exposes to other contexts
-├── application                    // use-case orchestration (no business rules)
-│   ├── acl                    // this context's facade implementation
-│   └── internal
-│       ├── commandservices    // command service implementations
-│       ├── queryservices      // query service implementations
-│       ├── eventhandlers      // react to domain events
-│       └── outboundservices
-│           └── acl            // talk to other contexts through their facades
-├── domain                         // the domain model + its ports (depends on nothing)
-│   ├── model
-│   │   ├── aggregates
-│   │   ├── entities
-│   │   ├── valueobjects
-│   │   ├── commands       // command types (domain)
-│   │   ├── queries        // query types (domain)
-│   │   └── events         // domain events
-│   ├── services           // command/query service interfaces (ports)
-│   └── exceptions         // domain-specific exceptions
-└── infrastructure                 // outbound adaptors — the context reaches out
-    └── persistence
-        └── jpa
-            └── repositories       // Spring Data repositories
+com.quickbite.platform
+├── QuickBitePlatformApplication.java        @SpringBootApplication + @EnableJpaAuditing
+├── ordering/                                 a bounded context
+│   ├── domain/
+│   │   ├── model/
+│   │   │   ├── aggregates/                   Order
+│   │   │   ├── entities/                     OrderLine
+│   │   │   ├── valueobjects/                 CustomerId, Money, OrderCode, OrderStatus, OrderLines
+│   │   │   ├── commands/                     CreateOrderCommand, PlaceOrderCommand, …
+│   │   │   ├── queries/                      GetOrderByIdQuery, GetAllOrdersQuery, …
+│   │   │   └── events/                       OrderPlacedEvent, OrderCancelledEvent
+│   │   ├── services/                         OrderCommandService, OrderQueryService  (interfaces)
+│   │   └── exceptions/                       OrderNotFoundException, CustomerNotFoundException
+│   ├── application/
+│   │   ├── internal/
+│   │   │   ├── commandservices/              OrderCommandServiceImpl
+│   │   │   ├── queryservices/                OrderQueryServiceImpl
+│   │   │   ├── eventhandlers/                OrderPlacedEventHandler
+│   │   │   └── outboundservices/acl/         ExternalCustomerService
+│   │   └── acl/                              <Context>ContextFacadeImpl, when this context is a provider
+│   ├── infrastructure/
+│   │   └── persistence/jpa/repositories/     OrderRepository
+│   └── interfaces/
+│       ├── rest/                             OrdersController, OrderLinesController, OrderingExceptionHandler
+│       │   ├── resources/                    OrderResource, CreateOrderResource, …
+│       │   └── transform/                    CreateOrderCommandFromResourceAssembler, OrderResourceFromEntityAssembler, …
+│       └── acl/                              <Context>ContextFacade, when this context is a provider
+├── customers/                                another bounded context, same shape
+├── iam/                                      the identity context, same shape plus infrastructure/{authorization,hashing,tokens}
+└── shared/                                   the shared kernel — see shared-kernel.md
+    ├── domain/model/aggregates/              AuditableAbstractAggregateRoot
+    ├── domain/model/entities/                AuditableModel
+    ├── infrastructure/documentation/openapi/configuration/   OpenApiConfiguration
+    ├── infrastructure/persistence/jpa/configuration/strategy/ SnakeCaseWithPluralizedTablePhysicalNamingStrategy
+    └── interfaces/rest/                      GlobalExceptionHandler, resources/MessageResource
 ```
 
-**What each layer is** (dependencies always point inward, toward `domain`):
+Two things about the tree that are decisions, not accidents:
 
-- **`interfaces` — inbound adaptors.** Where the outside world drives this context: REST controllers, message/event listeners, a CLI. They turn external input into application calls and shape the response back out. No business logic.
-- **`application` — application services.** They orchestrate use cases (here split into command and query services): load aggregates, invoke their behavior, manage transactions and security. They coordinate but hold no business rules.
-- **`domain` — the domain model.** Aggregates, entities, value objects, domain events, the service *interfaces* (ports), and domain exceptions. Every business rule lives here, and it depends on nothing outside itself.
-- **`infrastructure` — outbound adaptors.** The technical pieces the context uses to reach external systems: the Spring Data repositories, message publishers, external API clients. They implement any ports the inner layers declare.
+- **Commands and queries live in the domain**, not in the application layer. They are part of the model: a `PlaceOrderCommand` is a sentence in the ubiquitous language, and the aggregate takes it as a constructor argument. The application layer only *executes* them.
+- **The service interfaces live in `domain/services` and their implementations in `application/internal`.** The domain says what can be asked of it; the application layer says how it is done, with which repository and which other context. A controller depends on the interface and never sees the implementation.
 
-**Inbound vs. outbound adaptor** describes the direction of flow. An *inbound* adaptor brings a request *into* the context — e.g., a controller turning an HTTP call into a command. An *outbound* adaptor lets the context reach *out* to something external — e.g., a repository writing to the database, or an ACL service calling another context. The domain in the middle never knows about either: the inner layers declare **ports** (interfaces), and the adaptors implement them.
+What each layer is for:
+
+| Layer | Holds | Never holds |
+| --- | --- | --- |
+| `domain` | aggregates, entities, value objects, commands, queries, events, the service interfaces, domain exceptions | anything from `org.springframework.web`, a repository, another context's types |
+| `application` | command and query service implementations, event handlers, the outbound ACL services, the inbound facade implementation | business rules — if an `if` decides what the domain allows, it belongs in the aggregate |
+| `infrastructure` | Spring Data repositories, and whatever talks to the outside: hashing, tokens, external APIs | logic that reads a domain object to decide something |
+| `interfaces` | REST controllers, resources, assemblers, the context's exception advice, the facade interface other contexts call | domain types in a signature; a repository |
+
+JPA annotations do live on the domain classes. That is a deliberate, pragmatic trade: the model stays readable and one class describes the concept and its persistence; the price is that the domain depends on `jakarta.persistence`. The domain still never depends on Spring Web, on a repository, or on another bounded context.
+
+## Naming table
+
+The same name, spelled the same way, everywhere. Given an aggregate `Order` in the context `ordering`:
+
+| Thing | Name | Package |
+| --- | --- | --- |
+| Aggregate root | `Order` | `domain/model/aggregates` |
+| Entity inside the aggregate | `OrderLine` | `domain/model/entities` |
+| Value object | `Money`, `OrderCode`; enum `OrderStatus` | `domain/model/valueobjects` |
+| Reference to another aggregate | `CustomerId`, `MenuItemId` | `domain/model/valueobjects` |
+| Command | `<Verb><Aggregate>Command` — `CreateOrderCommand`, `PlaceOrderCommand`, `AddLineToOrderCommand` | `domain/model/commands` |
+| Query | `Get<Aggregate>By<Field>Query`, `GetAll<Aggregates>Query`, `GetAll<Aggregates>By<Field>Query` | `domain/model/queries` |
+| Domain event | `<Aggregate><PastParticiple>Event` — `OrderPlacedEvent` | `domain/model/events` |
+| Service interfaces | `OrderCommandService`, `OrderQueryService` — every method is `handle` | `domain/services` |
+| Domain exception | `OrderNotFoundException` | `domain/exceptions` |
+| Service implementations | `OrderCommandServiceImpl`, `OrderQueryServiceImpl` | `application/internal/commandservices`, `…/queryservices` |
+| Event handler | `OrderPlacedEventHandler`, method `on(OrderPlacedEvent)` | `application/internal/eventhandlers` |
+| Outbound ACL service | `ExternalCustomerService` | `application/internal/outboundservices/acl` |
+| Facade this context exposes | `CustomersContextFacade` / `CustomersContextFacadeImpl` | `interfaces/acl` / `application/acl` |
+| Repository | `OrderRepository` | `infrastructure/persistence/jpa/repositories` |
+| Controller | **plural** — `OrdersController` at `/api/v1/orders`; nested `OrderLinesController` at `/api/v1/orders/{orderId}/lines` | `interfaces/rest` |
+| Context advice | `OrderingExceptionHandler` | `interfaces/rest` |
+| Resources | `OrderResource` (response), `CreateOrderResource`, `AddLineToOrderResource` (requests) | `interfaces/rest/resources` |
+| Assemblers | `CreateOrderCommandFromResourceAssembler.toCommandFromResource(resource)`, `OrderResourceFromEntityAssembler.toResourceFromEntity(entity)` | `interfaces/rest/transform` |
+| Path variable | `{orderId}`, never `{id}` | |
+| Database table | `orders`, `order_lines` — plural snake_case, produced by the naming strategy | |
+
+A context package is one lowercase word (`ordering`, `customers`, `iam`); a REST path is plural kebab-case (`/api/v1/menu-items`). The generator derives every spelling from the two names you give it — see `adding-a-resource.md`.
