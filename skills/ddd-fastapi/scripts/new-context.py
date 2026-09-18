@@ -37,6 +37,10 @@ from pathlib import Path
 SKILL_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = SKILL_DIR / "assets" / "context-template"
 KERNEL_MARKER = Path("shared/domain/entities.py")
+# Entity names whose spellings collide with names the template uses: pydantic's
+# Field, the repository's local `model`, the `name` placeholder field, and the
+# cls/self parameters. Each was measured to break the generated code.
+TEMPLATE_NAMES = {"field", "model", "name", "cls", "self"}
 
 
 def split_words(name):
@@ -144,6 +148,28 @@ def locate_project_root(into):
     )
 
 
+def taken_module_names(root):
+    """Return the top-level module names a context package must not shadow.
+
+    The standard library's, and those installed in the project's .venv when
+    there is one. A context named ``email`` or ``calendar`` would otherwise be
+    imported instead of the standard module, and break the libraries that use it.
+    """
+    # sys.stdlib_module_names exists from Python 3.10; the list below covers the
+    # names a context is likely to be given when an older python3 runs this.
+    names = set(getattr(sys, "stdlib_module_names", ())) | {
+        "calendar", "email", "queue", "secrets", "logging", "types", "test", "profile",
+        "statistics", "html", "http", "json", "io", "select", "signal", "token", "uuid",
+    }
+    venvs = [*root.glob(".venv/lib/python*/site-packages"), *root.glob(".venv/Lib/site-packages")]
+    for site_packages in venvs:
+        for entry in site_packages.iterdir():
+            name = entry.name.split(".")[0].split("-")[0]
+            if name.isidentifier() and not name.startswith("_"):
+                names.add(name)
+    return names
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Scaffold a DDD bounded context for a FastAPI project.",
@@ -194,8 +220,26 @@ def main():
     if not package.isidentifier() or keyword.iskeyword(package) or package in {"shared", "alembic"}:
         print(f"{package!r} cannot be the package of a bounded context", file=sys.stderr)
         return 1
+    if package in taken_module_names(root):
+        print(
+            f"{package!r} is already the name of a module Python or an installed library imports.\n"
+            f"A bounded context is a top-level package, so it would shadow that module and break\n"
+            f"the application at import. Name the context after what it owns instead, e.g.\n"
+            f"'{package}_delivery' or 'messaging' rather than 'email'.",
+            file=sys.stderr,
+        )
+        return 1
     if not mapping["__Entity__"].isidentifier():
         print(f"{args.entity!r} does not give a valid Python class name", file=sys.stderr)
+        return 1
+    if mapping["__entity__"] in TEMPLATE_NAMES:
+        print(
+            f"{args.entity!r} collides with a name the generated code already uses "
+            f"({', '.join(sorted(TEMPLATE_NAMES))}).\n"
+            f"Give the entity a more specific name in the ubiquitous language, e.g. "
+            f"'Form{mapping['__Entity__']}' or 'Display{mapping['__Entity__']}'.",
+            file=sys.stderr,
+        )
         return 1
 
     planned = []

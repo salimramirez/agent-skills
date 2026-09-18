@@ -49,7 +49,7 @@ Only the modules a context needs exist: no empty `services.py` in a domain witho
 
 Two things about the tree that are decisions, not accidents:
 
-- **The contexts sit next to `main.py`, not under an `app/` package.** Each one is a top-level import (`from ordering.domain.entities import Order`), which keeps the context name at the front of every import line — reading the imports of a module tells you which contexts it touches. `fastapi dev main.py` and Alembic (`prepend_sys_path = .`) both run from the root.
+- **The contexts sit next to `main.py`, not under an `app/` package.** Each one is a top-level import (`from ordering.domain.entities import Order`), which keeps the context name at the front of every import line — reading the imports of a module tells you which contexts it touches. `fastapi dev main.py` and Alembic (`prepend_sys_path = .`) both run from the root. The price is that a context cannot share its name with a module: measured, a context called `email`, `calendar` or `secrets` shadows the standard module and the application no longer imports. Name the context after what it owns (`messaging`, `scheduling`); `new-context.py` refuses standard-library names and anything installed in `.venv`.
 - **The routes module is `routes.py`.** In FastAPI a "service" is something else; the module that holds the `APIRouter` is named after it.
 
 ## Module and class names

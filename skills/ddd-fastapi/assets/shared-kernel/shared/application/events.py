@@ -24,13 +24,17 @@ class EventBus:
         self._handlers: defaultdict[type[DomainEvent], list[EventHandler]] = defaultdict(list)
 
     def subscribe(self, event_type: type[DomainEvent], handler: EventHandler) -> None:
-        """Register a handler for one event type.
+        """Register a handler for one event type; registering it again has no effect.
+
+        Idempotent because subscriptions happen in the application's lifespan,
+        which a test suite may run several times in one process.
 
         Args:
             event_type (type[DomainEvent]): The event class to listen to.
             handler (EventHandler): Coroutine function called with each event.
         """
-        self._handlers[event_type].append(handler)
+        if handler not in self._handlers[event_type]:
+            self._handlers[event_type].append(handler)
 
     async def publish(self, events: Iterable[DomainEvent]) -> None:
         """Deliver each event to every handler subscribed to its type.

@@ -15,8 +15,8 @@ class SignUpRequest(BaseModel):
 class SignInRequest(BaseModel):
     """Body of ``POST /api/v1/authentication/sign-in``."""
 
-    username: str = Field(examples=["ana"])
-    password: str = Field(examples=["s3cret-pass"])
+    username: str = Field(max_length=50, examples=["ana"])
+    password: str = Field(max_length=128, examples=["s3cret-pass"])
 
 
 class UserResponse(BaseModel):

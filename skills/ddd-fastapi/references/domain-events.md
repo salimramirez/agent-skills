@@ -85,6 +85,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 What the bus guarantees, measured:
 
 - Every handler subscribed to the event's exact type is called, in subscription order.
+- Subscribing the same handler twice has no effect, so a test suite that starts the application several times in one process does not end up calling each handler several times.
 - **A handler that raises is logged with its traceback and skipped**; the next handler still runs, and the request that published the event still succeeds.
 - Nothing is stored. An event published while the process dies is lost.
 
