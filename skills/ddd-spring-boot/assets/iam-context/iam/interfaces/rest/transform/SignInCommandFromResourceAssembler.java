@@ -4,6 +4,8 @@ import __base_package__.iam.domain.model.commands.SignInCommand;
 import __base_package__.iam.interfaces.rest.resources.SignInResource;
 
 /**
+ * SignInCommandFromResourceAssembler
+ * @summary
  * Assembler to convert a SignInResource to a SignInCommand.
  */
 public class SignInCommandFromResourceAssembler {

@@ -4,6 +4,8 @@ import __base_package__.iam.domain.model.aggregates.User;
 import __base_package__.iam.interfaces.rest.resources.AuthenticatedUserResource;
 
 /**
+ * AuthenticatedUserResourceFromEntityAssembler
+ * @summary
  * Assembler to convert a User entity and its token to an AuthenticatedUserResource.
  */
 public class AuthenticatedUserResourceFromEntityAssembler {

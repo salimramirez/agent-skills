@@ -2,6 +2,7 @@ package __base_package__.iam.application.internal.outboundservices.tokens;
 
 /**
  * TokenService interface
+ * @summary
  * This interface is used to generate and validate tokens
  */
 public interface TokenService {

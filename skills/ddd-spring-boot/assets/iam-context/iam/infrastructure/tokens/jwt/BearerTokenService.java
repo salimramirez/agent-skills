@@ -5,6 +5,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
 
 /**
+ * BearerTokenService
+ * @summary
  * This interface is a marker interface for the JWT token service.
  * It extends the {@link TokenService} interface.
  * Infrastructure implements it once, in TokenServiceImpl, and the security pipeline injects it by this type.

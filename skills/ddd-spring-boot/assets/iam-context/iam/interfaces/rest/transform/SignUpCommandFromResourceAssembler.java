@@ -7,6 +7,8 @@ import __base_package__.iam.interfaces.rest.resources.SignUpResource;
 import java.util.*;
 
 /**
+ * SignUpCommandFromResourceAssembler
+ * @summary
  * Assembler to convert a SignUpResource to a SignUpCommand.
  */
 public class SignUpCommandFromResourceAssembler {

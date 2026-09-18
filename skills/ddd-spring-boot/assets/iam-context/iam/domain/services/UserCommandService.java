@@ -9,9 +9,8 @@ import java.util.Optional;
 
 /**
  * User command service
- * <p>
- *     This interface represents the service to handle user commands.
- * </p>
+ * @summary
+ * This interface represents the service to handle user commands.
  */
 public interface UserCommandService {
     /**

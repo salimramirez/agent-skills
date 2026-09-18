@@ -4,6 +4,8 @@ import __base_package__.iam.domain.model.entities.Role;
 import __base_package__.iam.interfaces.rest.resources.RoleResource;
 
 /**
+ * RoleResourceFromEntityAssembler
+ * @summary
  * Assembler to convert a Role entity to a RoleResource.
  */
 public class RoleResourceFromEntityAssembler {

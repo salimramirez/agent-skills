@@ -7,6 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 /**
+ * UserRepository
+ * @summary
  * This interface is responsible for providing the User entity related operations.
  * It extends the JpaRepository interface.
  */

@@ -9,9 +9,8 @@ import java.util.Optional;
 
 /**
  * Role query service
- * <p>
- *     This interface represents the service that handles the role queries.
- * </p>
+ * @summary
+ * This interface represents the service that handles the role queries.
  */
 public interface RoleQueryService {
     /**

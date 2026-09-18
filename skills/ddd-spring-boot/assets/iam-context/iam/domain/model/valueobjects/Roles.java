@@ -2,9 +2,8 @@ package __base_package__.iam.domain.model.valueobjects;
 
 /**
  * Roles
- * <p>
- *     This enum represents the roles in the system.
- * </p>
+ * @summary
+ * This enum represents the roles in the system.
  */
 public enum Roles {
     ROLE_USER,

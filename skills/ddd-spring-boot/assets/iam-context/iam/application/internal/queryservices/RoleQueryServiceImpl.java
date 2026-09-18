@@ -12,6 +12,7 @@ import java.util.Optional;
 
 /**
  * RoleQueryServiceImpl class
+ * @summary
  * This class is used to handle the role queries
  */
 @Service

@@ -18,8 +18,9 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import java.util.List;
 
 /**
- *  Roles Controller
- *  This controller is responsible for handling all the requests related to roles
+ * Roles Controller
+ * @summary
+ * This controller is responsible for handling all the requests related to roles
  */
 @RestController
 @RequestMapping(value = "/api/v1/roles", produces = APPLICATION_JSON_VALUE)

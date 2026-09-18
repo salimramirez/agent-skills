@@ -26,6 +26,7 @@ SKILL_DIR = Path(__file__).resolve().parent.parent
 ASSETS_DIR = SKILL_DIR / "assets"
 PACKAGE_PLACEHOLDER = "__base_package__"
 ASSETS = ("shared-kernel", "iam-context")
+KERNEL_MARKER = "shared/domain/model/aggregates/AuditableAbstractAggregateRoot.java"
 
 NOTES = {
     "shared-kernel": """
@@ -91,7 +92,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Install a copyable asset of the ddd-spring-boot skill.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__.split("Examples", 1)[1].rstrip() if "Examples" in __doc__ else None,
+        epilog="Examples" + __doc__.split("Examples", 1)[1].rstrip(),
     )
     parser.add_argument("asset", choices=ASSETS, help="which asset to install")
     parser.add_argument("--package", default=None,
@@ -163,6 +164,11 @@ def main():
         return 0
 
     print(NOTES[args.asset].format(package=package).rstrip())
+    if args.asset == "iam-context" and not (package_dir / KERNEL_MARKER).exists():
+        print(f"""
+The shared kernel is not under {package_dir / 'shared'} yet, and the IAM context
+extends it. Install it before compiling:
+  python3 "{Path(__file__).resolve()}" shared-kernel --into {args.into}""")
     return 0
 
 

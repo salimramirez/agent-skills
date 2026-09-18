@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import java.util.Arrays;
 
 /**
+ * RoleCommandServiceImpl
+ * @summary
  * Implementation of {@link RoleCommandService} to handle {@link SeedRolesCommand}
  */
 @Service
@@ -22,9 +24,7 @@ public class RoleCommandServiceImpl implements RoleCommandService {
     }
 
     /**
-     * This method will handle the {@link SeedRolesCommand} and will create the roles if not exists
-     * @param command {@link SeedRolesCommand}
-     * @see SeedRolesCommand
+     * {@inheritDoc}
      */
     @Override
     public void handle(SeedRolesCommand command) {

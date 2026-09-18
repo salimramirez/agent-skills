@@ -2,6 +2,7 @@ package __base_package__.iam.application.internal.outboundservices.hashing;
 
 /**
  * HashingService interface
+ * @summary
  * This interface is used to encode and match passwords
  */
 public interface HashingService {

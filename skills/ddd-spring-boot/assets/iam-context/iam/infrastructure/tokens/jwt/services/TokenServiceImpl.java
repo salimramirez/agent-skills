@@ -19,6 +19,8 @@ import java.util.Date;
 import java.util.function.Function;
 
 /**
+ * TokenServiceImpl
+ * @summary
  * Token service implementation for JWT tokens.
  * This class is responsible for generating and validating JWT tokens.
  * It uses the secret and expiration days from the application.properties file.
@@ -40,10 +42,7 @@ public class TokenServiceImpl implements BearerTokenService {
     private int expirationDays;
 
     /**
-     * This method generates a JWT token from an authentication object
-     * @param authentication the authentication object
-     * @return String the JWT token
-     * @see Authentication
+     * {@inheritDoc}
      */
     @Override
     public String generateToken(Authentication authentication) {
@@ -78,9 +77,7 @@ public class TokenServiceImpl implements BearerTokenService {
     }
 
     /**
-     * This method extracts the username from a JWT token
-     * @param token the token
-     * @return String the username
+     * {@inheritDoc}
      */
     @Override
     public String getUsernameFromToken(String token) {
@@ -88,9 +85,7 @@ public class TokenServiceImpl implements BearerTokenService {
     }
 
     /**
-     * This method validates a JWT token
-     * @param token the token
-     * @return boolean true if the token is valid, false otherwise
+     * {@inheritDoc}
      */
     @Override
     public boolean validateToken(String token) {
@@ -157,6 +152,9 @@ public class TokenServiceImpl implements BearerTokenService {
         return request.getHeader(AUTHORIZATION_PARAMETER_NAME);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public String getBearerTokenFrom(HttpServletRequest request) {
         String parameter = getAuthorizationParameterFrom(request);

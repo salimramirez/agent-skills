@@ -5,6 +5,8 @@ import __base_package__.iam.domain.model.entities.Role;
 import __base_package__.iam.interfaces.rest.resources.UserResource;
 
 /**
+ * UserResourceFromEntityAssembler
+ * @summary
  * Assembler to convert a User entity to a UserResource.
  */
 public class UserResourceFromEntityAssembler {

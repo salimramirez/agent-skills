@@ -120,7 +120,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Scaffold a DDD bounded context for a Spring Boot project.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__.split("Examples", 1)[1].rstrip() if "Examples" in __doc__ else None,
+        epilog="Examples" + __doc__.split("Examples", 1)[1].rstrip(),
     )
     parser.add_argument("--context", required=True,
                         help="bounded context, in the ubiquitous language (e.g. ordering)")

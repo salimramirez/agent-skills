@@ -4,9 +4,8 @@ import __base_package__.iam.domain.model.commands.SeedRolesCommand;
 
 /**
  * Role command service
- * <p>
- *     This interface represents the service to handle role commands.
- * </p>
+ * @summary
+ * This interface represents the service to handle role commands.
  */
 public interface RoleCommandService {
     /**

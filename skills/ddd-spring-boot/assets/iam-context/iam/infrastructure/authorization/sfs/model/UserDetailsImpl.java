@@ -12,6 +12,8 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 /**
+ * UserDetailsImpl
+ * @summary
  * This class is responsible for providing the user details to the Spring Security framework.
  * It implements the UserDetails interface.
  */

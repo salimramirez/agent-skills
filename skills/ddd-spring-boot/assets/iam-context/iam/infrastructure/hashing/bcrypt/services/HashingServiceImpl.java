@@ -5,6 +5,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
+ * HashingServiceImpl
+ * @summary
  * This class implements the {@link BCryptHashingService} interface.
  * It is used to hash passwords using the BCrypt algorithm.
  */
@@ -17,9 +19,7 @@ public class HashingServiceImpl implements BCryptHashingService {
     }
 
     /**
-     * Hash a password using the BCrypt algorithm
-     * @param rawPassword the password to hash
-     * @return String the hashed password
+     * {@inheritDoc}
      */
     @Override
     public String encode(CharSequence rawPassword) {
@@ -27,10 +27,7 @@ public class HashingServiceImpl implements BCryptHashingService {
     }
 
     /**
-     * Check if a raw password matches a hashed password
-     * @param rawPassword the raw password
-     * @param encodedPassword the hashed password
-     * @return boolean true if the raw password matches the hashed password, false otherwise
+     * {@inheritDoc}
      */
     @Override
     public boolean matches(CharSequence rawPassword, String encodedPassword) {

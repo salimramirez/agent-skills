@@ -6,6 +6,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 
 /**
+ * UsernamePasswordAuthenticationTokenBuilder
+ * @summary
  * This class is used to build the UsernamePasswordAuthenticationToken object
  * that is used to authenticate the user.
  */

@@ -138,7 +138,7 @@ The base class gives every aggregate a generated `Long`. The alternative is a ty
 @Entity
 public class Order {
     @EmbeddedId
-    private OrderId id;      // record OrderId(UUID value), created with OrderId.newId()
+    private OrderId id;      // record OrderId(UUID orderId), created with OrderId.newId()
 ```
 
 It buys a signature that cannot confuse an order id with a customer id, and a `findById(OrderId)` that reads like the domain. It costs the base class (and with it the audit columns, unless you re-add them), `Long` everywhere at the edge (the path variable, the query, the ACL facade all turn into `UUID`/`String`), and — the part that decides it — **JPA does not generate values for an `@EmbeddedId`**: a `@GeneratedValue` on it is ignored, the insert goes out with a `NULL` key, and the database rejects it. So the domain must generate the identity itself, which means UUIDs.

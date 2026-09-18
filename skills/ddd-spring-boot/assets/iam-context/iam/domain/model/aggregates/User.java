@@ -16,7 +16,6 @@ import java.util.Set;
  * @summary
  * This class represents the aggregate root for the User entity: the credentials and the roles
  * that Spring Security turns into authorities. The password stored here is already hashed.
- *
  * @see AuditableAbstractAggregateRoot
  */
 @Getter
@@ -37,15 +36,30 @@ public class User extends AuditableAbstractAggregateRoot<User> {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles;
 
+    /**
+     * Default constructor
+     */
     public User() {
         this.roles = new HashSet<>();
     }
+
+    /**
+     * Create a user with the given credentials and no roles yet
+     * @param username the username
+     * @param password the password, already hashed
+     */
     public User(String username, String password) {
         this.username = username;
         this.password = password;
         this.roles = new HashSet<>();
     }
 
+    /**
+     * Create a user with the given credentials and roles
+     * @param username the username
+     * @param password the password, already hashed
+     * @param roles the roles; an empty list gets the default role
+     */
     public User(String username, String password, List<Role> roles) {
         this(username, password);
         addRoles(roles);

@@ -10,9 +10,8 @@ import java.util.Optional;
 
 /**
  * User query service
- * <p>
- *     This interface represents the service to handle user queries.
- * </p>
+ * @summary
+ * This interface represents the service to handle user queries.
  */
 public interface UserQueryService {
     /**

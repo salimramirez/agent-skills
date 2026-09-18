@@ -4,6 +4,8 @@ import __base_package__.iam.application.internal.outboundservices.hashing.Hashin
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
+ * BCryptHashingService
+ * @summary
  * This interface is a marker interface for the BCrypt hashing service.
  * It extends the {@link HashingService} and {@link PasswordEncoder} interfaces.
  * Infrastructure implements it once, in HashingServiceImpl, and the configuration injects it by this type.

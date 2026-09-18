@@ -24,14 +24,13 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 /**
  * AuthenticationController
- * <p>
- *     This controller is responsible for handling authentication requests.
- *     It exposes two endpoints:
- *     <ul>
- *         <li>POST /api/v1/authentication/sign-in</li>
- *         <li>POST /api/v1/authentication/sign-up</li>
- *     </ul>
- * </p>
+ * @summary
+ * This controller is responsible for handling authentication requests.
+ * It exposes two endpoints:
+ * <ul>
+ * <li>POST /api/v1/authentication/sign-in</li>
+ * <li>POST /api/v1/authentication/sign-up</li>
+ * </ul>
  */
 @RestController
 @RequestMapping(value = "/api/v1/authentication", produces = APPLICATION_JSON_VALUE)

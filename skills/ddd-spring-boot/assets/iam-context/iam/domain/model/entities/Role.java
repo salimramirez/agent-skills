@@ -8,10 +8,9 @@ import java.util.List;
 
 /**
  * Role entity
- * <p>
- *     This entity represents the role of a user in the system.
- *     It is used to define the permissions of a user.
- * </p>
+ * @summary
+ * This entity represents the role of a user in the system.
+ * It is used to define the permissions of a user.
  */
 @Getter
 @Entity

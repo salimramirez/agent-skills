@@ -1,6 +1,8 @@
 package __base_package__.iam.domain.exceptions;
 
 /**
+ * InvalidCredentialsException
+ * @summary
  * Exception thrown when a sign-in fails.
  * @summary
  * Raised for an unknown username and for a wrong password alike, so the response never says

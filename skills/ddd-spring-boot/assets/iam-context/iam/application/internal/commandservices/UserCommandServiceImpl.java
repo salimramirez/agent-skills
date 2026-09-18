@@ -17,10 +17,9 @@ import java.util.Optional;
 
 /**
  * User command service implementation
- * <p>
- *     This class implements the {@link UserCommandService} interface and provides the implementation for the
- *     {@link SignInCommand} and {@link SignUpCommand} commands.
- * </p>
+ * @summary
+ * This class implements the {@link UserCommandService} interface and provides the implementation for the
+ * {@link SignInCommand} and {@link SignUpCommand} commands.
  */
 @Service
 public class UserCommandServiceImpl implements UserCommandService {
@@ -42,7 +41,7 @@ public class UserCommandServiceImpl implements UserCommandService {
      *     This method handles the {@link SignInCommand} command and returns the user and the token.
      * </p>
      * @param command the sign-in command containing the username and password
-     * @return and optional containing the user matching the username and the generated token
+     * @return an optional containing the user matching the username and the generated token
      * @throws InvalidCredentialsException if the user is not found or the password is invalid
      */
     @Override

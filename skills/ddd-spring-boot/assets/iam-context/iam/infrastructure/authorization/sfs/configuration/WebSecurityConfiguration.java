@@ -23,12 +23,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import java.util.List;
 
 /**
- * Web Security Configuration.
- * <p>
+ * WebSecurityConfiguration
+ * @summary
  * This class is responsible for configuring the web security.
  * It enables the method security and configures the security filter chain.
  * It includes the authentication manager, the authentication provider, the password encoder and the authentication entry point.
- * </p>
  */
 @Configuration
 @EnableMethodSecurity

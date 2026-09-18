@@ -4,7 +4,7 @@ The conventions that make this code recognizable, beyond where the files sit.
 
 ## Javadoc on every type
 
-Every class, record, interface and enum opens with a Javadoc block, and so does every public method that is not an override. The shape is always the same: a title line, then `@summary` with the prose, then the tags.
+Every class, record, interface and enum opens with a Javadoc block, and so does every public method that is not an override. The shape is always the same: a title line, then `@summary` with the prose when there is more to say than the title, then the tags.
 
 ```java
 /**

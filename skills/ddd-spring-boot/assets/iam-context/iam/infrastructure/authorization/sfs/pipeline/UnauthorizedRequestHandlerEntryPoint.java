@@ -12,25 +12,20 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 /**
- * Unauthorized Request Handler.
- * <p>
+ * UnauthorizedRequestHandlerEntryPoint
+ * @summary
  * This class is responsible for handling unauthorized requests.
  * It is used by the Spring Security framework to handle unauthorized requests.
  * It implements the AuthenticationEntryPoint interface.
- * </p>
  * @see AuthenticationEntryPoint
  */
-
 @Component
 public class UnauthorizedRequestHandlerEntryPoint implements AuthenticationEntryPoint {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UnauthorizedRequestHandlerEntryPoint.class);
 
     /**
-     * This method is called by the Spring Security framework when an unauthorized request is detected.
-     * @param request The request that caused the exception
-     * @param response The response that will be sent to the client
-     * @param authenticationException The exception that caused the invocation
+     * {@inheritDoc}
      */
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authenticationException) throws IOException, ServletException {

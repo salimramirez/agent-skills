@@ -16,11 +16,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Bearer Authorization Request Filter.
- * <p>
+ * BearerAuthorizationRequestFilter
+ * @summary
  * This class is responsible for filtering requests and setting the user authentication.
  * It extends the OncePerRequestFilter class.
- * </p>
  * @see OncePerRequestFilter
  */
 public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
@@ -36,10 +35,7 @@ public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
     }
 
     /**
-     * This method is responsible for filtering requests and setting the user authentication.
-     * @param request The request object.
-     * @param response The response object.
-     * @param filterChain The filter chain object.
+     * {@inheritDoc}
      */
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {

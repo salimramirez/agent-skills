@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
+ * UserQueryServiceImpl
+ * @summary
  * Implementation of {@link UserQueryService} interface.
  */
 @Service

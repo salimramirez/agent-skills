@@ -12,6 +12,7 @@ import java.sql.Timestamp;
 
 /**
  * ApplicationReadyEventHandler class
+ * @summary
  * This class is used to handle the ApplicationReadyEvent
  */
 @Service

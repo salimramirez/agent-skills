@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 /**
+ * RoleRepository
+ * @summary
  * This interface is responsible for providing the Role entity related operations.
  * It extends the JpaRepository interface.
  */
