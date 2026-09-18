@@ -4,7 +4,7 @@ A collection of [Agent Skills](https://agentskills.io) — portable, model-agnos
 
 ## Skills
 
-Five skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
+Six skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
 
 They share a core block of DDD design rules, duplicated on purpose so that **every one of them works on its own**. Install only the stack skill you need, or the playbook alongside it when the work is modeling rather than coding.
 
@@ -21,6 +21,14 @@ The design rules and the modeling work, stack-agnostic.
 The four-layer package structure, the shared kernel, value objects and typed ids as JPA embeddables, aggregate roots as JPA entities with real behavior, commands and queries as records with their command and query services, repositories, domain events, anti-corruption layers, the REST interface with resources and assemblers, and domain exceptions.
 
 Works on Spring Boot 3 and 4 with Java 17+.
+
+### `ddd-fastapi` — writing it in FastAPI / Python
+
+Bounded contexts as top-level packages with four layers and one module per kind in each, aggregates as plain classes with behavior, value objects as frozen dataclasses, application services that own the transaction through a unit-of-work port, repository ports with async SQLAlchemy adapters mapping to separate ORM models, Alembic migrations, domain events, anti-corruption layers, and the REST interface with Pydantic schemas and a clean OpenAPI description.
+
+Like `ddd-spring-boot` it is an **opinionated** house style, lighter where Python leaves room for taste, and it ships code: `scripts/install.py` writes a new project with the shared kernel or an IAM context with sign-up, sign-in and JWT, and `scripts/new-context.py` scaffolds a whole bounded context. Every framework claim in it was checked by running the code — that a blocking call inside `async def` stalls every request, that an async session cannot refresh after a commit or lazy-load a relationship, that a commit in a dependency's teardown runs after the client already has its response.
+
+FastAPI 0.122+ on Python 3.12+, SQLAlchemy 2 async over PostgreSQL, Alembic, Pydantic v2.
 
 ### `ddd-angular` — writing it in Angular
 
@@ -56,6 +64,10 @@ npx skills add salimramirez/agent-skills --skill ddd-playbook
 
 ```bash
 npx skills add salimramirez/agent-skills --skill ddd-spring-boot
+```
+
+```bash
+npx skills add salimramirez/agent-skills --skill ddd-fastapi
 ```
 
 ```bash
