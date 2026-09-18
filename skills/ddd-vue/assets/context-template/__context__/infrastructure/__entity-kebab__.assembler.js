@@ -1,6 +1,17 @@
 import {__Entity__} from '../domain/model/__entity-kebab__.entity.js';
 
 /**
+ * One __entity__ exactly as the API sends it. Name every field the wire
+ * carries, in the wire's own spelling -- this is the only declaration of that
+ * shape anywhere, so a mistyped field here becomes a reported error instead of
+ * an undefined that reaches a view.
+ *
+ * @typedef {Object} __Entity__ApiResource
+ * @property {number} id
+ * @property {string} name
+ */
+
+/**
  * Anti-corruption layer between the __entities__ API and the __context__ model.
  *
  * @remarks
@@ -15,7 +26,7 @@ export class __Entity__Assembler {
     /**
      * Builds one entity from a resource payload.
      *
-     * @param {Object} resource - Resource as the API returned it.
+     * @param {__Entity__ApiResource} resource - Resource as the API returned it.
      * @returns {__Entity__} The entity the rest of the app works with.
      */
     static toEntityFromResource(resource) {

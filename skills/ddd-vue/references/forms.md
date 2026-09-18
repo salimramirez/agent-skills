@@ -26,11 +26,12 @@ const store = useOrderingStore();
 const {addOrder, updateOrder} = store;
 
 const form = reactive({customerId: null, deliveryAddress: ''});
-const isEdit = computed(() => !!route.params.id);
+const isEdit = computed(() => route.params.id !== undefined);
+const id = computed(() => Number(route.params.id));
 
 onMounted(() => {
   if (!isEdit.value) return;
-  const order = store.getOrderById(route.params.id);
+  const order = store.getOrderById(id.value);
   if (!order) {
     navigateBack();
     return;
@@ -45,7 +46,7 @@ onMounted(() => {
  */
 function saveOrder() {
   const order = new Order({
-    id: isEdit.value ? Number(route.params.id) : null,
+    id: isEdit.value ? id.value : null,
     customerId: form.customerId,
     deliveryAddress: form.deliveryAddress
   });
@@ -84,14 +85,14 @@ Four details that matter more than they look:
 
 **`reactive({...})` for the form, not one `ref` per field.** One object to reset, one object to patch, and `v-model="form.field"` reads plainly.
 
-**`id: null` on create, `Number(route.params.id)` on edit.** The route param is a string; passing it through unconverted gives an entity whose id never matches anything in the store, and the next update silently creates a duplicate.
+**Convert the route parameter once.** A route param arrives as a string, and passing it through unconverted gives an entity whose id never matches anything in the store — the next update silently creates a duplicate. It is also typed `string | string[]`, since a repeatable param arrives as an array, so handing `route.params.id` straight to the store is a type error as well. One `computed` does the conversion, and everything after it works with a number: `id: null` on create, `id.value` on edit.
 
 **The form holds plain values, not the entity.** Binding `v-model` straight onto an entity instance means a half-typed address is already in the store's copy — and an abandoned edit leaves it there. Build the entity at submit time instead.
 
 **A deep link can arrive before the store has loaded.** `getOrderById` returns `undefined` and the guard above navigates back. If the screen should survive it, watch the store's collection and patch the form when it arrives, rather than blocking the route:
 
 ```javascript
-watch(() => store.getOrderById(route.params.id), order => {
+watch(() => store.getOrderById(id.value), order => {
   if (order) Object.assign(form, {customerId: order.customerId, deliveryAddress: order.deliveryAddress});
 }, {immediate: true});
 ```

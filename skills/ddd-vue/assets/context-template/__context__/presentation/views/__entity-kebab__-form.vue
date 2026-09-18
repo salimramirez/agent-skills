@@ -18,11 +18,12 @@ const store = use__Context__Store();
 const {add__Entity__, update__Entity__} = store;
 
 const form = reactive({name: ''});
-const isEdit = computed(() => !!route.params.id);
+const isEdit = computed(() => route.params.id !== undefined);
+const id = computed(() => Number(route.params.id));
 
 onMounted(() => {
   if (!isEdit.value) return;
-  const __entity__ = store.get__Entity__ById(route.params.id);
+  const __entity__ = store.get__Entity__ById(id.value);
   if (__entity__) form.name = __entity__.name;
   else navigateBack();
 });
@@ -33,7 +34,7 @@ onMounted(() => {
  */
 function save__Entity__() {
   const __entity__ = new __Entity__({
-    id: isEdit.value ? Number(route.params.id) : null,
+    id: isEdit.value ? id.value : null,
     name: form.name
   });
   if (isEdit.value) update__Entity__(__entity__);

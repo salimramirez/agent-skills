@@ -61,23 +61,17 @@ function navigateToEdit(id) {
 /**
  * @component OrderCard
  * @description Presents one order and reports what the user wants done with it.
- *
- * ### Props
- * | Name    | Type    | Required | Description                  |
- * |---------|---------|----------|------------------------------|
- * | `order` | `Order` | yes      | The order entity to display. |
- *
- * ### Emitted events
- * | Event              | Payload  | Description                          |
- * |--------------------|----------|--------------------------------------|
- * | `cancel-requested` | `number` | Identity of the order to cancel.     |
- * | `edit-requested`   | `number` | Identity of the order to edit.       |
  */
 import {toRefs} from 'vue';
 import {Order} from '../../domain/model/order.entity.js';
 
 const props = defineProps({order: {type: Order, required: true}});
-const emit = defineEmits(['cancel-requested', 'edit-requested']);
+const emit = defineEmits({
+  /** @param {number} id - Identity of the order to cancel. */
+  'cancel-requested': id => typeof id === 'number',
+  /** @param {number} id - Identity of the order to edit. */
+  'edit-requested': id => typeof id === 'number'
+});
 const {order} = toRefs(props);
 </script>
 
@@ -98,9 +92,24 @@ A dumb component **emits, it does not decide**. `OrderCard` never calls the stor
 
 Note `order.isCancellable()` in the template. The rule lives on the entity (see `domain-model.md`), so the component asks rather than re-deriving — and the same question from three templates gets the same answer.
 
-Two details that keep the split honest:
+Four details keep the split honest:
 
-- **Type the prop with the entity class.** `{type: Order, required: true}` makes Vue warn in development when a raw resource is passed instead of an assembled entity — a cheap check that the anti-corruption layer was not skipped.
+- **Type the prop with the entity class.** `{type: Order, required: true}` makes Vue warn in development when a raw resource is passed instead of an assembled entity — a cheap check that the anti-corruption layer was not skipped. It also carries the type into the template, so an editor resolves `order.total` and flags a typo without a line of extra annotation. Do not restate the prop's type in a JSDoc block above it: the declaration is already the type, and a second copy only gives the two something to disagree about.
+
+- **An array prop needs `PropType`.** `{type: Array}` says a list arrives; it cannot say a list *of what*, and the elements land in the template as `unknown`. The element type has one home:
+
+  ```javascript
+  const props = defineProps({
+    orders: {
+      /** @type {import('vue').PropType<Order[]>} */
+      type: Array,
+      required: true
+    }
+  });
+  ```
+
+  Beware `Array[Order]` — it looks plausible and it is not: JavaScript reads it as indexing the `Array` constructor with a class, which yields `undefined`. The elements then resolve to `never`, and every access fails, including the correct ones.
+
 - **`toRefs(props)`** so destructuring keeps reactivity. Which form you use matters, and the difference is invisible until a prop changes:
 
   ```javascript
@@ -111,6 +120,17 @@ Two details that keep the split honest:
   ```
 
   Destructuring the `defineProps()` **call** is compiled into property accesses and stays reactive from Vue 3.5 on. Destructuring the `props` **variable** is a plain object destructure and freezes the value. `toRefs` works either way, which is why the convention uses it.
+
+- **Declare emits in object form.** `defineEmits(['cancel-requested'])` names the events and stops there — the payload is undeclared, so `emit('cancel-requested', someString)` passes unnoticed. The object form takes a validator per event, and a `@param` on it states the payload once:
+
+  ```javascript
+  const emit = defineEmits({
+    /** @param {number} id - Identity of the order to cancel. */
+    'cancel-requested': id => typeof id === 'number'
+  });
+  ```
+
+  The payload is now checked where it is emitted, and the validator warns at runtime too — the same bargain `{type: Order}` makes for props.
 
 The view stays thin too: wire the store to the components, handle navigation, stop. A view that filters, merges, or reformats domain data has taken work that belongs to a `computed` in the store or a method on the entity.
 
