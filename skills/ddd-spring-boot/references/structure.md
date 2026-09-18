@@ -56,7 +56,7 @@ What each layer is for:
 | `domain` | aggregates, entities, value objects, commands, queries, events, the service interfaces, domain exceptions | anything from `org.springframework.web`, a repository, another context's types |
 | `application` | command and query service implementations, event handlers, the outbound ACL services, the inbound facade implementation | business rules — if an `if` decides what the domain allows, it belongs in the aggregate |
 | `infrastructure` | Spring Data repositories, and whatever talks to the outside: hashing, tokens, external APIs | logic that reads a domain object to decide something |
-| `interfaces` | REST controllers, resources, assemblers, the context's exception advice, the facade interface other contexts call | domain types in a signature; a repository |
+| `interfaces` | REST controllers, resources, assemblers, the context's exception advice, the facade interface other contexts call | a domain type in an endpoint's signature or a resource; a repository |
 
 JPA annotations do live on the domain classes. That is a deliberate, pragmatic trade: the model stays readable and one class describes the concept and its persistence; the price is that the domain depends on `jakarta.persistence`. The domain still never depends on Spring Web, on a repository, or on another bounded context.
 

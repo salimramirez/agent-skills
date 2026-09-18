@@ -67,7 +67,7 @@ Return types follow a small table, so a controller knows what to expect without 
 | Command | Returns |
 | --- | --- |
 | create | `Long` — the new id; the controller re-queries with it |
-| update of plain attributes | `Optional<Order>` — the saved aggregate |
+| update of plain attributes | `Optional<Order>` — the saved aggregate; a missing id throws `OrderNotFoundException` rather than returning empty, so the `Optional` is the shape, not the error channel |
 | delete | `void` |
 | a state transition (place, cancel, confirm) | `Long` — the id of the aggregate it acted on |
 | a query for one | `Optional<Order>` |
@@ -118,7 +118,7 @@ public class OrderCommandServiceImpl implements OrderCommandService {
 Three things to notice:
 
 - **The rule is in the aggregate.** The service calls `order.place()`; it does not check the status first. If it did, the same rule would exist twice and drift.
-- **Uniqueness is the service's job**, because only the repository can see the whole collection: `if (orderRepository.existsByCode(command.code())) throw new IllegalArgumentException("Order with code %s already exists".formatted(…))`. On an update, the check excludes the aggregate itself — `existsByNameAndIdIsNot(command.name(), command.id())`.
+- **Uniqueness is the service's job**, because only the repository can see the whole collection. The generated template shows it: `if (menuItemRepository.existsByName(command.name())) throw new IllegalArgumentException("MenuItem with name %s already exists".formatted(command.name()))` before the create, and `existsByNameAndIdIsNot(command.name(), command.menuItemId())` before the update, so that renaming an aggregate to its own name is not a collision.
 - **`findById(...).map(...).orElseThrow(...)` is one expression, and the `map` returns the id.** The value of the chain *is* the method's return value; nothing is returned after it.
 
 The generated context template shows the create / update / delete trio with the `Optional<Entity>` update and the `void` delete; this reference shows the transitions. Both follow the table above.

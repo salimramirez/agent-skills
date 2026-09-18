@@ -37,7 +37,7 @@ The aggregate registers the event inside the method that makes it true, through 
 
 Nothing is published yet. `AbstractAggregateRoot` keeps the registered events, and Spring Data publishes them **when the aggregate is saved** — `orderRepository.save(order)` in the command service is the moment the handlers run. An event registered on an aggregate that is never saved is never published, which is exactly right: what did not get persisted did not happen.
 
-Register the event *after* the state change, and pass `this.getId()` only on an aggregate that already has one. A creation event from a constructor would carry a `null` id, because the id is assigned by the insert; if a "created" event is needed, raise it from the command service after `save` has returned.
+Register the event *after* the state change, and pass `this.getId()` only on an aggregate that already has one. A creation event registered from the constructor would carry a `null` id, because the id is assigned by the insert. If a "created" event is needed, the command service publishes it after `save` has returned, through an injected `ApplicationEventPublisher` — `applicationEventPublisher.publishEvent(new OrderCreatedEvent(this, order.getId()))` — which is the one case where an event is not registered on the aggregate.
 
 ## Handling it
 

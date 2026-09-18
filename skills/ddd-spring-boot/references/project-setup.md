@@ -71,7 +71,7 @@ documentation.application.version=@project.version@
 `application-dev.properties`:
 
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/quickbite?useSSL=true&serverTimezone=UTC&createDatabaseIfNotExist=true&publicKeyRetrieval=true
+spring.datasource.url=jdbc:mysql://localhost:3306/quickbite?useSSL=true&serverTimezone=UTC&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true
 spring.datasource.username=root
 spring.datasource.password=${QUICKBITE_MYSQL_PWD}
 spring.jpa.show-sql=true

@@ -77,13 +77,13 @@ Read the two kinds of `throw`: an `IllegalArgumentException` means the *input* i
 
 What the root guarantees, and how:
 
-- **Every change goes through a method.** There is no `setStatus`. `place()` is the only way to reach `PLACED`, and it checks what must be true first. `@Getter` goes on the fields the assemblers read; it never comes with `@Setter`.
+- **Every change goes through a method.** There is no `setStatus`. `place()` is the only way to reach `PLACED`, and it checks what must be true first. `@Getter` goes on the class when every field is read as it is (the generated template, `OrderLine`), and on the fields when one of them is exposed through a method instead (`lines`, read through `getLines()`); it never comes with `@Setter`.
 - **Other aggregates are referenced by id.** `CustomerId`, never `Customer`. A `@ManyToOne` to another aggregate root would let Ordering load, and change, a Customer inside an Order's transaction.
 - **A command in, an aggregate out.** `Order(CustomerId, CreateOrderCommand)` is the factory. The command service resolves what the command cannot carry (here, the customer's id from their email) and hands both over.
 - **The no-arg constructor is public and empty**, with the comment that says why. JPA needs it; nothing else calls it.
 - **A derived value is a method** (`total()`), not a field kept in sync. What a getter returns is computed from the lines every time, so it cannot be stale.
 
-`updateInformation(...)` is the one "update" method an aggregate may have — for the attributes with no rule between them, such as a course's title and description. It returns `this` so the service can `save(entity.updateInformation(...))` in one line.
+`updateInformation(...)` is the one "update" method an aggregate may have — for the attributes with no rule between them, such as a menu item's name and description. It returns `this` so the service can `save(entity.updateInformation(...))` in one line.
 
 ## Entities inside the aggregate
 

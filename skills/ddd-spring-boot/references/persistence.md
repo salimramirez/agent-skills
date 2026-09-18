@@ -57,4 +57,4 @@ OrderLine      → order_lines     (id, created_at, updated_at, order_id, menu_i
 Customer       → customers       (…, first_name, last_name, email_address)
 ```
 
-Every embedded record becomes columns of the owner's table, named after the record's components — which is why a component is called `customerId` and not `value`. Constraints that `update` cannot express (unique indexes, foreign keys it did not infer) go in a migration once the schema matters; until then the `existsBy…` guards in the command services are the uniqueness rule.
+Every embedded record becomes columns of the owner's table, named after the record's components — which is why a component is called `customerId` and not `value`. `@Column(unique = true)` on a field asks the database to guarantee a uniqueness as well; whatever `update` does not create for a table that already exists goes in a migration once the schema matters. Until then the `existsBy…` guards in the command services are the uniqueness rule.

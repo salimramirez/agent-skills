@@ -144,4 +144,4 @@ public class OrderLines {
 
 This is where the rules about the lines *as a whole* go — the total, whether there are any, later a maximum — instead of piling up on the aggregate root. Start the list as `new ArrayList<>()`: `List.of()` is immutable, and the first `add` on a fresh aggregate throws `UnsupportedOperationException`.
 
-A record component may also carry a Bean Validation annotation (`@Email String address`), but whether anyone checks it depends on where the record happens to be validated. The compact constructor runs on every `new`, with no one to configure. Keep the rule there and treat the annotation as documentation.
+A record component may also carry a Bean Validation annotation (`@Email String address`), but whether anyone checks it depends on where the record happens to be validated. The compact constructor runs on every `new` and needs nothing configured. Keep the rule there and treat the annotation as documentation.

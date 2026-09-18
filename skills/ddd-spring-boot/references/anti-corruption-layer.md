@@ -28,6 +28,9 @@ public class CustomersContextFacadeImpl implements CustomersContextFacade {
         this.customerQueryService = customerQueryService;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Long createCustomer(String firstName, String lastName, String email) {
         var createCustomerCommand = new CreateCustomerCommand(firstName, lastName, email);
@@ -35,6 +38,9 @@ public class CustomersContextFacadeImpl implements CustomersContextFacade {
         return customerId == null ? 0L : customerId;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Long fetchCustomerIdByEmail(String email) {
         var getCustomerByEmailQuery = new GetCustomerByEmailQuery(new EmailAddress(email));
@@ -85,7 +91,7 @@ This is where the translation happens: the facade's `0L` becomes `Optional.empty
 
 - **Primitives across the boundary.** `Long`, `String`, `boolean`. Never a `Customer`, never an `EmailAddress` from the other side — each context keeps the freedom to change its own types.
 - **`0L` for "not found"**, translated to `Optional` on the consumer's side. The facade stays simple to implement from any language or transport; the consumer gets a type that forces the caller to handle absence.
-- **Consumer names the service after the other context, with `External` in front**: `ExternalCustomerService`, `ExternalProfileService`. Grep for `External` and you have the map of every cross-context dependency.
+- **Consumer names the service after the other context, with `External` in front**: `ExternalCustomerService`, `ExternalCatalogService`. Grep for `External` and you have the map of every cross-context dependency.
 - **One facade per provider context**, not one per aggregate. It describes what the context offers, not its internals.
 
 When the other context becomes a separate service, only `ExternalCustomerService` changes — it calls HTTP instead of a bean — and the facade interface becomes that service's API contract. Nothing in `ordering/domain` notices.

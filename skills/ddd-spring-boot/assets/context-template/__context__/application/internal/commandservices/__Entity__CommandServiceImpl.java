@@ -46,10 +46,10 @@ public class __Entity__CommandServiceImpl implements __Entity__CommandService {
      */
     @Override
     public Optional<__Entity__> handle(Update__Entity__Command command) {
-        if (__entity__Repository.existsByNameAndIdIsNot(command.name(), command.__entity__Id()))
-            throw new IllegalArgumentException("__Entity__ with name %s already exists".formatted(command.name()));
         var __entity__ = __entity__Repository.findById(command.__entity__Id())
                 .orElseThrow(() -> new __Entity__NotFoundException(command.__entity__Id()));
+        if (__entity__Repository.existsByNameAndIdIsNot(command.name(), command.__entity__Id()))
+            throw new IllegalArgumentException("__Entity__ with name %s already exists".formatted(command.name()));
         var updated__Entity__ = __entity__Repository.save(__entity__.updateInformation(command.name()));
         return Optional.of(updated__Entity__);
     }

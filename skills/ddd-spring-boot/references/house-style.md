@@ -29,7 +29,7 @@ On a record, document the components with `@param`, and say the rule, not the ty
  */
 ```
 
-An implementation of an interface method carries `{@inheritDoc}` and nothing else — the contract is documented once, on the interface in `domain/services`:
+An implementation of an interface method carries `{@inheritDoc}` — the contract is documented once, on the interface in `domain/services` — and adds a paragraph only when the implementation does something the contract does not say, such as which failure it turns into which exception:
 
 ```java
     /**
@@ -73,7 +73,7 @@ public class OrderCommandServiceImpl implements OrderCommandService {
     }
 ```
 
-Lombok is for one thing: `@Getter`, on an aggregate, an entity or an event, so the assemblers can read them. Never `@Setter` — a setter is a rule that nobody wrote down — and never `@Data` on an entity, which drags in an `equals` over every field of a thing that has an identity.
+In the model, Lombok is for one thing: `@Getter`, on an aggregate, an entity or an event, so the assemblers can read them. Never `@Setter` — a setter is a rule that nobody wrote down — and never `@Data` on an entity, which drags in an `equals` over every field of a thing that has an identity.
 
 ## Strings, streams, and messages
 

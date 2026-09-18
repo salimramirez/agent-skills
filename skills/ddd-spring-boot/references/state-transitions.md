@@ -25,7 +25,6 @@ Endpoints for the operations that are not CRUD: placing, cancelling, confirming,
         var cancelledOrderId = orderCommandService.handle(cancelOrderCommand);
         return ResponseEntity.ok(new MessageResource("Order %s cancelled".formatted(cancelledOrderId)));
     }
-}
 ```
 
 There is no assembler because there is no body: the command is built from the path variable. The command service returns the id it acted on, and the two failure cases never reach this method — `OrderNotFoundException` becomes a 404 in the context's advice, and the `IllegalStateException` the aggregate throws for an order that is not a draft becomes a 409 in the shared one.
