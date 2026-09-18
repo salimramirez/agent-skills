@@ -6,14 +6,18 @@
     install.py shared-kernel   only the shared kernel, into an existing project
     install.py iam-context     a complete IAM bounded context: sign-up, sign-in, JWT
 
-Everything is written under --into (default: the current directory), which is
-the project root -- the directory that holds main.py and one package per
-bounded context. The project's name, used in pyproject.toml and as the API
-title, defaults to that directory's name; pass --name to choose it.
+Everything is written under the project root -- the directory that holds
+pyproject.toml, main.py and one package per bounded context. For shared-kernel
+and iam-context that is the nearest directory, from the current one upward,
+with a pyproject.toml, so the script works from any directory of the project.
+For project it is the current directory, which should be empty. --into names
+the root explicitly in every case. The project's name, used in pyproject.toml
+and as the API title, defaults to that directory's name; pass --name to choose it.
 
-Examples (run from the root of the project, SKILL being this skill's directory):
+Examples (SKILL being this skill's directory):
+    cd quickbite-platform    # a new, empty directory
     python3 "$SKILL/scripts/install.py" project --name "QuickBite Platform"
-    python3 "$SKILL/scripts/install.py" shared-kernel --dry-run
+    python3 "$SKILL/scripts/install.py" shared-kernel --dry-run    # from anywhere in a project
     python3 "$SKILL/scripts/install.py" iam-context
 
 Everything it writes is ordinary code -- read it, then change it. Each asset ends
@@ -134,30 +138,65 @@ def planned_files(asset):
     )
 
 
+PROJECT_MARKER = "pyproject.toml"
+
+
+def locate_project_root(into):
+    """Return the project root: --into if given, else the nearest directory with a pyproject.toml.
+
+    The search starts at the current directory and walks up, so the script works
+    from anywhere inside the project. Returns (path, None) or (None, message).
+    """
+    if into is not None:
+        return Path(into), None
+    for directory in (Path.cwd(), *Path.cwd().parents):
+        if (directory / PROJECT_MARKER).is_file():
+            return directory, None
+    return None, (
+        f"No {PROJECT_MARKER} in the current directory or above it, so this is not inside a project.\n"
+        f"Run this from inside your FastAPI project, or pass --into with the path to its root."
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Install a copyable asset of the ddd-fastapi skill.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__.split("Examples", 1)[1].rstrip() if "Examples" in __doc__ else None,
+        epilog="Examples" + __doc__.split("Examples", 1)[1].rstrip(),
     )
     parser.add_argument("asset", choices=ASSETS, help="which asset to install")
-    parser.add_argument("--into", default=".", help="project root (default: the current directory)")
+    parser.add_argument("--into", default=None,
+                        help="project root (default: the current directory for project, "
+                             "the nearest directory with a pyproject.toml otherwise)")
     parser.add_argument("--name", default=None,
                         help="project name, e.g. 'QuickBite Platform' (default: from the directory name)")
     parser.add_argument("--dry-run", action="store_true", help="list what would be written and stop")
     parser.add_argument("--force", action="store_true", help="overwrite files that already exist")
     args = parser.parse_args()
 
-    root = Path(args.into)
+    if args.asset == "project":
+        root = Path(args.into or ".")
+        enclosing = next((d for d in Path.cwd().resolve().parents if (d / PROJECT_MARKER).is_file()), None)
+        if args.into is None and enclosing is not None:
+            print(
+                f"{enclosing} already holds a {PROJECT_MARKER}, so this directory is inside a project.\n"
+                f"Run this in a new, empty directory, or pass --into to create the project here anyway.",
+                file=sys.stderr,
+            )
+            return 1
+    else:
+        root, problem = locate_project_root(args.into)
+        if root is None:
+            print(problem, file=sys.stderr)
+            return 1
 
-    # Run this from the project, not from the skill. --into is resolved against
-    # the current directory, so running it from the skill folder would quietly
-    # install the asset inside the skill instead of inside the project.
+    # Never write inside the skill: its assets hold a pyproject.toml of their
+    # own, and running from there would install the asset into the skill.
     resolved = root.resolve()
     if resolved == SKILL_DIR or SKILL_DIR in resolved.parents:
         print(
-            f"--into resolves to {resolved}, which is inside the skill itself.\n"
-            f"Run this from the root of your FastAPI project, for example:\n"
+            f"The project root resolves to {resolved}, which is inside the skill itself.\n"
+            f"Run this from inside your FastAPI project, for example:\n"
             f'  cd path/to/project && python3 "{Path(__file__).resolve()}" {args.asset}',
             file=sys.stderr,
         )
@@ -167,7 +206,7 @@ def main():
         print(
             f"The shared kernel is not under {root / 'shared'}, and the IAM context builds on it.\n"
             f"Install it first:\n"
-            f'  python3 "{Path(__file__).resolve()}" shared-kernel --into {args.into}',
+            f'  python3 "{Path(__file__).resolve()}" shared-kernel --into {root}',
             file=sys.stderr,
         )
         return 1

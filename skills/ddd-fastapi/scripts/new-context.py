@@ -14,12 +14,13 @@ naming placeholders, which is the part that is easy to get wrong by hand -- the
 same concept appears as PascalCase and snake_case, singular and plural, in
 class names, module paths, function names, table names and REST paths.
 
-The context is written next to main.py, in the project root given by --into
-(default: the current directory). The generated code builds on the shared
-kernel, so install that first:
+The context is written next to main.py, in the project root: the nearest
+directory, from the current one upward, that holds a pyproject.toml, so the
+script works from any directory of the project; --into names the root
+explicitly. The generated code builds on the shared kernel, so install that first:
     python3 "$SKILL/scripts/install.py" shared-kernel
 
-Examples (run from the root of the project, SKILL being this skill's directory):
+Examples (run from anywhere inside the project, SKILL being this skill's directory):
     python3 "$SKILL/scripts/new-context.py" --context ordering --entity Order
     python3 "$SKILL/scripts/new-context.py" --context catalog --entity MenuItem --dry-run
     python3 "$SKILL/scripts/new-context.py" --context staffing --entity Person --plural People
@@ -123,11 +124,31 @@ def sort_imports(text):
     return "\n".join(result[:-1])
 
 
+PROJECT_MARKER = "pyproject.toml"
+
+
+def locate_project_root(into):
+    """Return the project root: --into if given, else the nearest directory with a pyproject.toml.
+
+    The search starts at the current directory and walks up, so the script works
+    from anywhere inside the project. Returns (path, None) or (None, message).
+    """
+    if into is not None:
+        return Path(into), None
+    for directory in (Path.cwd(), *Path.cwd().parents):
+        if (directory / PROJECT_MARKER).is_file():
+            return directory, None
+    return None, (
+        f"No {PROJECT_MARKER} in the current directory or above it, so this is not inside a project.\n"
+        f"Run this from inside your FastAPI project, or pass --into with the path to its root."
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Scaffold a DDD bounded context for a FastAPI project.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__.split("Examples", 1)[1].rstrip() if "Examples" in __doc__ else None,
+        epilog="Examples" + __doc__.split("Examples", 1)[1].rstrip(),
     )
     parser.add_argument("--context", required=True,
                         help="bounded context, in the ubiquitous language (e.g. ordering)")
@@ -135,7 +156,8 @@ def main():
                         help="aggregate this context starts with (e.g. Order, MenuItem)")
     parser.add_argument("--plural", default=None,
                         help="plural of the entity, when the naive one is wrong (e.g. People)")
-    parser.add_argument("--into", default=".", help="project root (default: the current directory)")
+    parser.add_argument("--into", default=None,
+                        help="project root (default: the nearest directory with a pyproject.toml)")
     parser.add_argument("--dry-run", action="store_true", help="list what would be written and stop")
     parser.add_argument("--force", action="store_true", help="overwrite files that already exist")
     args = parser.parse_args()
@@ -144,16 +166,18 @@ def main():
         print(f"Template directory not found: {TEMPLATE_DIR}", file=sys.stderr)
         return 1
 
-    root = Path(args.into)
+    root, problem = locate_project_root(args.into)
+    if root is None:
+        print(problem, file=sys.stderr)
+        return 1
 
-    # Run this from the project, not from the skill. --into is resolved against
-    # the current directory, so running it from the skill folder would quietly
-    # scaffold the context inside the skill instead of inside the project.
+    # Never write inside the skill: its assets hold a pyproject.toml of their
+    # own, and running from there would scaffold the context into the skill.
     resolved = root.resolve()
     if resolved == SKILL_DIR or SKILL_DIR in resolved.parents:
         print(
-            f"--into resolves to {resolved}, which is inside the skill itself.\n"
-            f"Run this from the root of your FastAPI project, for example:\n"
+            f"The project root resolves to {resolved}, which is inside the skill itself.\n"
+            f"Run this from inside your FastAPI project, for example:\n"
             f'  cd path/to/project && python3 "{Path(__file__).resolve()}" '
             f"--context {args.context} --entity {args.entity}",
             file=sys.stderr,
@@ -224,7 +248,7 @@ The endpoints are at /api/v1/{mapping['__entities-kebab__']}, under "{mapping['_
         print(f"""
 The shared kernel is not under {root / 'shared'} yet, and the generated code
 builds on it. Install it before running the application:
-  python3 "{SKILL_DIR / 'scripts' / 'install.py'}" shared-kernel --into {args.into}""")
+  python3 "{SKILL_DIR / 'scripts' / 'install.py'}" shared-kernel --into {root}""")
     return 0
 
 

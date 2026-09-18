@@ -127,13 +127,13 @@ The rules above are stack-agnostic. Everything below is how FastAPI expresses th
 
 Four things ship as code, because they should come out the same every time.
 
-**Run every command from the root of the project** — the directory that holds `main.py` — with `$SKILL` pointing at the directory this skill was installed into, `.claude/skills/ddd-fastapi` in a standard install:
+**Run the commands from inside the project**, with `$SKILL` pointing at the directory this skill was installed into — `.claude/skills/ddd-fastapi` in a standard install, a path relative to the project root:
 
 ```bash
 SKILL=.claude/skills/ddd-fastapi
 ```
 
-Each script writes under the current directory, refuses to write inside the skill itself, and refuses to overwrite a file unless given `--force`. Add `--dry-run` to see what would be written, `--into` to target another directory.
+Each script writes under the project root — the nearest directory, from the current one upward, that holds `pyproject.toml` — so it works from any directory of the project; `install.py project` is the exception and writes into the current directory, which should be a new, empty one. The scripts refuse to write inside the skill itself or outside a project, and to overwrite a file unless given `--force`. Add `--dry-run` to see what would be written, `--into` to name the root explicitly.
 
 - **`assets/project/`** — a new project: `pyproject.toml`, `main.py`, Alembic configured for async and for the application's settings, `.env.example`, and the shared kernel:
 

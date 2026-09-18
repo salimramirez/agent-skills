@@ -19,7 +19,7 @@ SKILL=.claude/skills/ddd-fastapi       # wherever this skill was installed
 python3 "$SKILL/scripts/new-context.py" --context ordering --entity Order
 ```
 
-Run it from the project root, next to `main.py`. It writes the fourteen files of a CRUD aggregate under `ordering/` and prints the three edits it cannot make: the router in `main.py`, the models import in `alembic/env.py`, and the migration. The naming — PascalCase and snake_case, singular and plural, class, module, function, table and path — is the error-prone part, and it is the part that is now done. `--plural People` fixes a plural the naive rule gets wrong.
+Run it from anywhere inside the project: it finds the root by the nearest `pyproject.toml` above the current directory, and writes the fourteen files of a CRUD aggregate under `ordering/`, next to `main.py`. It prints the three edits it cannot make: the router in `main.py`, the models import in `alembic/env.py`, and the migration. The naming — PascalCase and snake_case, singular and plural, class, module, function, table and path — is the error-prone part, and it is the part that is now done. `--plural People` fixes a plural the naive rule gets wrong.
 
 Install the shared kernel first if `shared/` is not there yet: `python3 "$SKILL/scripts/install.py" shared-kernel`. See `shared-kernel.md`.
 
