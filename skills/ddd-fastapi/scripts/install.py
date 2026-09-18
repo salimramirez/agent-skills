@@ -73,6 +73,7 @@ Five things the installer cannot do for you:
 
   1. Add the dependencies:
          uv add pyjwt "pwdlib[argon2]"
+     (with pip: add both to [project] dependencies, then pip install . --group dev)
 
   2. Set the token secret, at least 32 characters, in .env (and from the
      environment in production):

@@ -89,7 +89,7 @@ The application service owns the transaction, and it says so in code: every meth
 - **One aggregate per commit.** A method that saves two aggregates in one transaction is a sign the boundary is wrong, or that the second change should react to an event from the first.
 - **`UnitOfWork` is a `Protocol`, and the request's `AsyncSession` satisfies it.** The service cannot run a query through it; it can only commit or roll back.
 
-Committing in a `yield` dependency's teardown instead is the common alternative, and it is the wrong one here: it was measured, and when that teardown raised, the client had already received a 200. A failed commit would report success.
+Committing in a `yield` dependency's teardown instead is the common alternative, and it is the wrong one here: by default the teardown runs after the response is sent — measured on FastAPI 0.122 and 0.141: when the teardown raised, the client had already received a 200. A failed commit would report success.
 
 ## What each method returns
 

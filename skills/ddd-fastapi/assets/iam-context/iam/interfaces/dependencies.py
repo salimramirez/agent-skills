@@ -2,9 +2,9 @@
 
 Besides building its own application service, this module is IAM's public
 door for every other context: :func:`get_current_user` authenticates a
-request, and :func:`require_roles` restricts a route to some roles. Other
-contexts import these two and :class:`CurrentUser`, and nothing else from
-IAM.
+request, :data:`CurrentUserDep` hands the caller to a route, and
+:func:`require_roles` restricts a route to some roles. Other contexts import
+these three and :class:`CurrentUser`, and nothing else from IAM.
 """
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass

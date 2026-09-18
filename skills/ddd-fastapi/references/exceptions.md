@@ -29,6 +29,8 @@ class NotFoundError(DomainError):
 
 Anything else that escapes — a `ValueError`, a `KeyError`, an `IntegrityError` — is a **500**, and should be: it is a bug, not a business outcome. That is why a rule never raises `ValueError`. When every failure is a `ValueError`, the route has to catch it, every catch returns the same 400, and a genuine bug (a `ValueError` from a library, a typo in a conversion) is reported to the client as their mistake.
 
+The one `IntegrityError` that is not quite a bug is a race on a uniqueness rule: two requests can both pass `exists_by_email` and then both insert. The unique constraint in the table is what guarantees the rule; the check in the service is what gives the common case a 409 with a message. If the race matters, close it in the repository adapter — the only layer that knows SQLAlchemy — by catching `IntegrityError` around the `flush` in `save` and raising the same domain exception (`EmailAlreadyRegisteredError`). The application service stays free of SQLAlchemy.
+
 ## Named exceptions build their own message
 
 A context's exceptions live in its `domain/exceptions.py`, extend the kernel's, and take what they need to say what went wrong:

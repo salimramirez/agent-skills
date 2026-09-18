@@ -50,7 +50,7 @@ An identity is `int | None` on the entity — `None` until the first save — so
 
 ## Names
 
-- **The ubiquitous language, in snake_case.** `open_order`, `place_order`, `delivery_address`. Never `Data`, `Info`, `Manager`, `Helper`, `Util`, `Handler` as a class name.
+- **The ubiquitous language, in snake_case.** `open_order`, `place_order`, `delivery_address`. Never `Data`, `Info`, `Manager`, `Helper`, `Util` as a class name.
 - **Application service methods are use cases**: a verb of the domain plus the aggregate — `place_order`, `register_customer`, `cancel_order` — or `get_<aggregate>_by_id` / `get_all_<aggregates>` for reads.
 - **Repository methods read like a collection**: `save`, `find_by_id`, `find_all`, `exists_by_email`, `delete`.
 - **Private state is a single underscore** (`self._status`), exposed read-only with `@property`, changed only by methods that enforce the rule.

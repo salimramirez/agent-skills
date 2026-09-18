@@ -17,6 +17,8 @@ It needs the shared kernel (the installer refuses without it) and prints five ed
 uv add pyjwt "pwdlib[argon2]"
 ```
 
+With pip, add both to `[project] dependencies` in `pyproject.toml` and run `pip install . --group dev` again.
+
 The settings, in `.env` — the secret from the environment outside development, and at least 32 characters, which `JwtSettings` enforces at start-up:
 
 ```bash
@@ -66,7 +68,7 @@ The token is an HS256 JWT whose `sub` is the username, with `iat` and `exp`; dec
 
 ## What other contexts use
 
-Three names from `iam.interfaces.dependencies`, and nothing else from IAM:
+Four names from `iam.interfaces.dependencies`, and nothing else from IAM — `CurrentUser`, and three dependencies built on it:
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -86,7 +88,7 @@ class CurrentUser:
       return CustomerResponse.from_entity(customer)
   ```
 
-  The account id is stored by the `Customer` as its own reference (`account_id`); it is never mistaken for the customer's id.
+  This assumes `Customer` gained an `account_id` attribute and `register_customer` a parameter for it — the asset's `Customer` has neither. The account id is stored as the customer's own reference to the account; it is never mistaken for the customer's id.
 
 - **`require_roles(*roles)`**, which builds a dependency that answers **403** unless the account holds one of the roles:
 
