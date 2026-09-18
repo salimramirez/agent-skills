@@ -7,6 +7,26 @@ ehthumbs.db
 .vscode/
 .idea/
 
+# Python bytecode and tool caches. The skills ship Python scripts, and running
+# one writes __pycache__ next to it; anything left inside skills/ reaches every
+# user through `npx skills add`.
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Node, for anything built while trying a skill out
+node_modules/
+
+# Local environment. Only the real file: the .env.example a skill ships stays.
+.env
+
+# Claude Code: per-user settings, and the worktrees the app creates here
+.claude/settings.local.json
+.claude/worktrees/
+
 # Logs / temp
 *.log
 
