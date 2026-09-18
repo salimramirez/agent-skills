@@ -79,7 +79,7 @@ In the model, Lombok is for one thing: `@Getter`, on an aggregate, an entity or 
 
 - Format with `"…%s…".formatted(value)`, not `String.format` and not concatenation.
 - Map a list with `.stream().map(OrderResourceFromEntityAssembler::toResourceFromEntity).toList()`.
-- Validation messages name the field as it is spelled in code: `"orderId cannot be null or less than 1"`, `"name cannot be null or blank"`. Not-found messages name the concept and the key: `"Order with id %s not found"`.
+- Validation messages in commands, queries and value objects name the field as it is spelled in code: `"orderId cannot be null or less than 1"`, `"name cannot be null or blank"`. A request resource speaks to the API client instead and says what is missing: `"Name is required"`. Not-found messages name the concept and the key: `"Order with id %s not found"`.
 - A one-line `if` that throws may go without braces; anything else gets them.
 
 ## What a controller looks like
