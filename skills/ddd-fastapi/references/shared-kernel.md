@@ -1,0 +1,123 @@
+# The shared kernel
+
+The modules every bounded context uses the same way, and why each one exists.
+
+Install them with `python3 "$SKILL/scripts/install.py" shared-kernel` (the `project` asset includes them). They land in `shared/`, in the same four layers as a context.
+
+```
+shared/
+├── domain/
+│   ├── entities.py          AggregateRoot — records domain events
+│   ├── events.py            DomainEvent — the base of every event
+│   └── exceptions.py        DomainError, ConflictError, NotFoundError
+├── application/
+│   ├── unit_of_work.py      UnitOfWork — the commit port
+│   └── events.py            EventBus and the process-wide event_bus
+├── infrastructure/
+│   ├── settings.py          Settings and the process-wide settings
+│   ├── database.py          engine, session_factory
+│   └── models.py            Base with the naming convention, AuditableModel
+└── interfaces/
+    ├── dependencies.py      get_session, SessionDep
+    ├── exception_handlers.py  domain exception → status code
+    └── schemas.py           ErrorResponse, MessageResponse, error_responses()
+```
+
+The kernel is small on purpose. **Nothing in it knows a business concept.** The moment a module in `shared/` mentions an order or a customer, it belongs to a context; the moment two contexts want to share a value object like `Money`, ask first whether they mean the same thing by it — usually one of them owns it and the other gets a copy of the meaning it needs.
+
+## `domain/`
+
+**`AggregateRoot`** is what every aggregate root extends. It does one thing: keep the domain events the aggregate raised until the application service pulls them. It has no `id` — each aggregate declares its own — and no persistence concern.
+
+```python
+class Order(AggregateRoot):
+    def __init__(self, customer_id: CustomerId, delivery_address: str, id: int | None = None, ...) -> None:
+        super().__init__()
+        ...
+
+    def place(self) -> None:
+        ...
+        self.record_event(OrderPlaced(order_id=self.id, customer_id=self._customer_id.value))
+```
+
+Entities *inside* an aggregate (`OrderLine`) do not extend it: only a root records events.
+
+**`DomainEvent`** is a frozen, keyword-only dataclass with `occurred_at`. Every event extends it; see `domain-events.md`.
+
+**The exception hierarchy** says what kind of failure happened, never which status code it becomes. See `exceptions.md`.
+
+## `application/`
+
+**`UnitOfWork`** is a `Protocol` with `commit()` and `rollback()`. An application service receives one and commits through it. `AsyncSession` satisfies the protocol as it is, so the wiring passes the request's session and no adapter class exists:
+
+```python
+return OrderApplicationService(SqlAlchemyOrderRepository(session), ..., session, event_bus)
+```
+
+The service sees `UnitOfWork`; it cannot run a query through it, which is the point.
+
+**`EventBus`** delivers events to handlers subscribed by type; `event_bus` is the one instance the application uses. See `domain-events.md`.
+
+## `infrastructure/`
+
+**`settings`** is read once, at import. See `project-setup.md`.
+
+**`database.py`** holds one async engine per process and the factory every session comes from:
+
+```python
+engine = create_async_engine(settings.database_url, echo=settings.database_echo, pool_pre_ping=True)
+
+# expire_on_commit=False: with the default, reading any attribute after a
+# commit triggers a lazy refresh, which an async session cannot do implicitly.
+session_factory = async_sessionmaker(engine, expire_on_commit=False)
+```
+
+A request gets its session from the `get_session` dependency, which lives in `shared/interfaces/dependencies.py` — it is HTTP wiring, and `infrastructure` never imports FastAPI:
+
+```python
+async def get_session() -> AsyncIterator[AsyncSession]:
+    async with session_factory() as session:
+        yield session
+
+
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
+```
+
+A script or an event handler opens its own with `async with session_factory() as session:`.
+
+The session **never commits by itself**. Closing it without a commit rolls back — measured: a customer saved and flushed (it even had its id) was not there for the next session. Commit is the application service's call, through `UnitOfWork`. The dependency does not commit in its teardown either, and that is measured too: when the code after `yield` in a dependency raised, the client had **already received its 200**. A commit that failed there would report success for a change that was never made.
+
+**`Base`** is the declarative base of every ORM model, with a naming convention on its `MetaData`:
+
+```python
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+
+class Base(DeclarativeBase):
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+```
+
+Without it the autogenerated migration creates constraints with no name, PostgreSQL invents one (`customers_email_key`), and the later migration that must drop it has to guess what the database called it. With it every migration names them — `pk_orders`, `uq_customers_email`, `fk_order_lines_order_id_orders`.
+
+**`AuditableModel`** is a mixin that adds `created_at` and `updated_at`, set by the database (`server_default=func.now()`, `onupdate=func.now()`), as `timestamptz`. Put it on the model of every aggregate root:
+
+```python
+class OrderModel(AuditableModel, Base):
+    __tablename__ = "orders"
+```
+
+The timestamps belong to the table, not to the aggregate: the domain does not read them. When a rule does need a moment — "an order can be cancelled within ten minutes of placing it" — that moment is a domain attribute, `placed_at`, set by `place()`, not the row's `updated_at`.
+
+## `interfaces/`
+
+**`SessionDep`** is what every context's `interfaces/dependencies.py` builds its application service on; see above.
+
+**`register_exception_handlers(app)`** installs the one handler that turns the kernel's exceptions into responses. See `exceptions.md`.
+
+**`ErrorResponse`** documents the error body in OpenAPI; **`error_responses(404, 409)`** builds the `responses=` argument of a route from it. **`MessageResponse`** is for the rare action that returns no resource.

@@ -10,7 +10,7 @@
     {
       "title": "Backend",
       "description": "Writing the model where it is the system of record and owns its invariants.",
-      "skills": ["ddd-spring-boot"]
+      "skills": ["ddd-spring-boot", "ddd-fastapi"]
     },
     {
       "title": "Frontend",
