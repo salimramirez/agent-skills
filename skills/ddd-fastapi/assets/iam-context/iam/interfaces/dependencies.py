@@ -18,7 +18,7 @@ from iam.domain.value_objects import Role
 from iam.infrastructure.hashing import Argon2HashingService
 from iam.infrastructure.repositories import SqlAlchemyUserRepository
 from iam.infrastructure.tokens import JwtSettings, JwtTokenService
-from shared.infrastructure.database import SessionDep
+from shared.interfaces.dependencies import SessionDep
 
 bearer_scheme = HTTPBearer(scheme_name="bearerAuth", description="The token returned by sign-in.")
 
@@ -27,7 +27,7 @@ bearer_scheme = HTTPBearer(scheme_name="bearerAuth", description="The token retu
 jwt_settings = JwtSettings()
 
 
-def get_user_service(session: SessionDep) -> UserApplicationService:
+async def get_user_service(session: SessionDep) -> UserApplicationService:
     """Build the application service on the request's session."""
     return UserApplicationService(
         SqlAlchemyUserRepository(session),

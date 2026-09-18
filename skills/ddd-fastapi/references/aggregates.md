@@ -19,11 +19,16 @@ class Order(AggregateRoot):
         super().__init__()
         if not delivery_address.strip():
             raise DomainError("Delivery address must not be blank")
-        self.id = id
+        self._id = id
         self._customer_id = customer_id
         self._delivery_address = delivery_address.strip()
         self._status = status
         self._lines = list(lines)
+
+    @property
+    def id(self) -> int | None:
+        """Identity assigned by the first save; ``None`` before it."""
+        return self._id
 
     @property
     def status(self) -> OrderStatus:
@@ -63,8 +68,8 @@ class Order(AggregateRoot):
 What makes it an aggregate rather than a record:
 
 - **Every rule about an order is a method of `Order`.** "Only a draft takes lines", "an empty order cannot be placed", "only a placed order can be cancelled" — each is one `if` inside the method that would break it. No service checks `order.status` before calling `place()`; `place()` checks.
-- **State is private and read through properties.** `order.status` reads; `order.status = …` is an `AttributeError`. The only way to change the status is a method that knows when it may.
-- **Collections go out as tuples.** `order.lines.append(...)` is impossible, so no line gets in without passing `add_line`.
+- **State is private and read through properties** — the id included. `order.status` reads; `order.status = …` is an `AttributeError`. The only way to change the status is a method that knows when it may.
+- **Collections go out as tuples.** `order.lines.append(...)` is impossible, so no line gets in without passing `add_line`. The tuple protects the collection, not what is in it — which is why the entities inside are read-only too (below).
 - **Derived values are properties, computed**, not stored: `total` cannot disagree with the lines.
 - **The constructor is also the rehydration path.** The repository builds a stored order with `Order(customer_id, address, id=…, status=…, lines=…)`, which re-runs the constructor's checks. A row that no longer satisfies them fails loudly on load instead of spreading.
 - **A transition records an event** after it changes the state. See `domain-events.md`.
@@ -86,10 +91,16 @@ class OrderLine:
             raise DomainError("Dish name must not be blank")
         if quantity < 1:
             raise DomainError("Quantity must be at least 1")
-        self.id = id
-        self.dish_name = dish_name.strip()
-        self.quantity = quantity
-        self.unit_price = unit_price
+        self._id = id
+        self._dish_name = dish_name.strip()
+        self._quantity = quantity
+        self._unit_price = unit_price
+
+    @property
+    def quantity(self) -> int:
+        return self._quantity
+
+    # id, dish_name and unit_price: read-only properties, the same way
 
     @property
     def subtotal(self) -> Money:
@@ -99,7 +110,7 @@ class OrderLine:
 - It does **not** extend `AggregateRoot`: only a root records events or has a repository.
 - It lives in the same `entities.py` as its root, because it has no meaning without it.
 - It is created by the root (`order.add_line(...)` builds it), never by the application service.
-- Its fields may be plain attributes: nothing outside the aggregate can reach an `OrderLine` to change it, because `order.lines` hands out a tuple and the service never holds one on its own. When a line gains a rule of its own ("quantity can only grow while the order is a draft"), the root's method enforces it.
+- **Its state is read-only, like the root's.** `order.lines` hands out the line objects themselves, so a writable `quantity` would let any code change a placed order — measured: `order.lines[0].quantity = 99` on a placed order went through and the total jumped from 60.00 to 2970.00. With properties it is an `AttributeError`. A change to a line is a method of the root (`order.change_quantity(line_id, quantity)`), which checks the status first.
 
 ## Another aggregate is a reference, never an object
 

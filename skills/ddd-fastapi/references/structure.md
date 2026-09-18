@@ -42,7 +42,7 @@ quickbite-platform/                       the project root
     ├── domain/                           entities.py (AggregateRoot), events.py, exceptions.py
     ├── application/                      unit_of_work.py, events.py (EventBus)
     ├── infrastructure/                   settings.py, database.py, models.py (Base)
-    └── interfaces/                       exception_handlers.py, schemas.py
+    └── interfaces/                       dependencies.py (get_session), exception_handlers.py, schemas.py
 ```
 
 Only the modules a context needs exist: no empty `services.py` in a domain without domain services, no `acl.py` in a context nobody consults. Every package has an `__init__.py` with a one-line docstring naming the layer and the context; the context's own `__init__.py` says what it owns.
@@ -63,10 +63,12 @@ Two things about the tree that are decisions, not accidents:
 | Repository port | `domain/repositories.py` | `<Aggregate>Repository` | `OrderRepository` |
 | Domain service | `domain/services.py` | what it decides | `DeliveryFeePolicy` |
 | Application service | `application/services.py` | `<Aggregate>ApplicationService` | `OrderApplicationService` |
+| Read-only query port | `application/queries.py` | `<Aggregate>Queries` | `OrderQueries` — only when reads outgrow the aggregate |
 | Event handler | `application/event_handlers.py` | a verb | `notify_kitchen` |
 | Outbound ACL | `application/acl.py` | `External<Context>Service` | `ExternalCustomerService` |
 | ORM model | `infrastructure/models.py` | `<Thing>Model` | `OrderModel`, `OrderLineModel` |
 | Repository adapter | `infrastructure/repositories.py` | `SqlAlchemy<Aggregate>Repository` | `SqlAlchemyOrderRepository` |
+| Query adapter | `infrastructure/queries.py` | `SqlAlchemy<Aggregate>Queries` | `SqlAlchemyOrderQueries` |
 | Router | `interfaces/routes.py` | `router` | `router`, or `<purpose>_router` when a context has several |
 | Request / response | `interfaces/schemas.py` | `<Action><Thing>Request`, `<Thing>Response` | `OpenOrderRequest`, `OrderResponse` |
 | Wiring | `interfaces/dependencies.py` | `get_<aggregate>_service`, `<Aggregate>ServiceDep` | `OrderServiceDep` |
@@ -87,7 +89,7 @@ Dependencies point inward: `interfaces` and `infrastructure` know `application` 
 | `infrastructure` | ORM models, repository adapters, clients for the outside world | `sqlalchemy`, its own `domain` and `application` ports, `shared.infrastructure` | `fastapi`, another context's anything |
 | `interfaces` | routes, schemas, dependency wiring, the inbound facade, the context's exception handler | everything of its own context, `fastapi`, `pydantic`, `shared` | another context's `domain` or `infrastructure` |
 
-`interfaces/dependencies.py` is the only module outside `infrastructure` that names an adapter class: it is where the ports meet their implementations. The one cross-context import in each direction is through an ACL — see `anti-corruption-layer.md` — and `iam.interfaces.dependencies`, which every context's router uses to authenticate a request.
+`interfaces/dependencies.py` is where the ports meet their implementations, and with the inbound facade (`interfaces/acl.py`, which builds its own repository) the only module outside `infrastructure` that names an adapter class. The one cross-context import in each direction is through an ACL — see `anti-corruption-layer.md` — and `iam.interfaces.dependencies`, which every context's router uses to authenticate a request.
 
 A quick check for the rule that matters most:
 

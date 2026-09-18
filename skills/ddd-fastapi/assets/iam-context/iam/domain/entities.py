@@ -25,10 +25,15 @@ class User(AggregateRoot):
         super().__init__()
         if not username.strip():
             raise DomainError("Username must not be blank")
-        self.id = id
+        self._id = id
         self._username = username.strip()
         self._password_hash = password_hash
         self._roles = frozenset(roles) or frozenset({Role.default()})
+
+    @property
+    def id(self) -> int | None:
+        """Identity assigned by the first save; ``None`` before it."""
+        return self._id
 
     @property
     def username(self) -> str:

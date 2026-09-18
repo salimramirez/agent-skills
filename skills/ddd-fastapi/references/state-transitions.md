@@ -34,7 +34,9 @@ Lines belong to an order, so they are addressed under it, in the same router:
 @router.post("/{order_id}/lines", status_code=status.HTTP_201_CREATED, responses=error_responses(400, 404, 409))
 async def add_order_line(order_id: int, request: AddOrderLineRequest, service: OrderServiceDep) -> OrderResponse:
     """Add a dish to a draft order."""
-    order = await service.add_line(order_id, request.dish_name, request.quantity, request.unit_price)
+    order = await service.add_line(
+        order_id, dish_name=request.dish_name, quantity=request.quantity, unit_price=request.unit_price
+    )
     return OrderResponse.from_entity(order)
 ```
 

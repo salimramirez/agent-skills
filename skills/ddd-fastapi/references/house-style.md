@@ -62,7 +62,7 @@ Absolute, from the project root, one statement per module: `from ordering.domain
 
 ## Collaborators come in through `__init__`
 
-An application service, a repository adapter or a facade receives what it needs as constructor arguments, typed with the port — never builds its own, never reaches for a module-level global. The one place that builds them is `interfaces/dependencies.py`. That is what makes a service testable with an in-memory repository and nothing else.
+An application service or a repository adapter receives what it needs as constructor arguments, typed with the port — never builds its own, never reaches for a module-level global. The places that build them are the entry points: `interfaces/dependencies.py` for a request, the inbound facade (`interfaces/acl.py`) for a call from another context, and an event handler for an event. That is what makes a service testable with an in-memory repository and nothing else.
 
 The exception is the process-wide singletons of the kernel — `settings`, `engine`, `event_bus` — which are created once, at import, on purpose.
 
@@ -77,7 +77,7 @@ The exception is the process-wide singletons of the kernel — `settings`, `engi
 - A public attribute that callers assign (`order.status = "PLACED"`). State changes through methods.
 - An entity with no methods but its constructor — the rules went somewhere else. Find them.
 - A `ValueError` or bare `Exception` raised for a business rule. Use the kernel's hierarchy (`exceptions.md`).
-- `async def` anywhere. The domain does not wait for anything.
+- `async def` anywhere but the repository ports. The domain does not wait for anything; a port is `async` only because its implementation will be.
 
 **Application**
 - An `if` on an aggregate's state (`if order.status == …`) — that decision belongs in a method of the aggregate.

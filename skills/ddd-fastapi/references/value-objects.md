@@ -33,7 +33,7 @@ class EmailAddress:
 - **`__post_init__` is the constructor's guard.** It validates, and normalizes through `object.__setattr__` — the one sanctioned way to write a frozen field, and only here.
 - **It raises `DomainError`** (400), not `ValueError`. A `ValueError` that escapes is a 500 — a bug — which is exactly what a bad email is not.
 
-A value object is **created from primitives at the boundary of the application service**, not in the route: the route passes `request.email` (a `str`), the service builds `EmailAddress(email)`. The domain type never appears in a schema.
+A value object is **created from primitives at the boundary of the application service**, not in the route: the route passes `request.email` (a `str`), the service builds `EmailAddress(email)`. A value object never appears in a schema. The one exception is an enum — see below.
 
 ## Operations return new instances
 
@@ -66,7 +66,7 @@ class Money:
         return cls(Decimal("0"), currency)
 ```
 
-Money is `Decimal`, never `float`: `0.1 + 0.2` is not `0.3` in binary floating point, and a total that is off by a cent is a defect. The request schema declares `unit_price: Decimal` too, so the value is never a float on its way in, and the response serializes it as a string (`"32.50"`), which is how JSON keeps it exact.
+Money is `Decimal`, never `float`: `0.1 + 0.2` is not `0.3` in binary floating point, and a total that is off by a cent is a defect. The response serializes a `Decimal` as a string (`"32.50"`), which is how JSON keeps it exact. On the way in, the request schema declares `unit_price: Decimal`, but a JSON *number* still reaches it through a `float` — measured: `0.1` and `32.50` arrive exact, `12345678901234567.89` arrives as `12345678901234568`. Everyday prices are safe; a client that needs every digit sends the amount as a string (`"32.50"`), the same form the API returns.
 
 ## References to other aggregates
 
@@ -99,7 +99,7 @@ class OrderStatus(StrEnum):
 
 - **Name and value are the same string.** A `StrEnum` member *is* a `str`, so it serializes to JSON as `"PLACED"` and compares equal to it; keeping name and value identical means the database, the API and the code all spell it one way.
 - **Stored as a `String` column**, and converted in the repository (`status=order.status.value` on the way in, `OrderStatus(model.status)` on the way out). Not SQLAlchemy's `Enum` type: by default it stores the member *names* and creates a PostgreSQL enum type, whose values a later migration can add to but not easily remove — a cost that buys nothing when the application already guards the values.
-- **A route may take the enum directly** as a query parameter (`status: OrderStatus | None = None`): FastAPI validates it and documents the allowed values, and an unknown one is a 422 before any code runs.
+- **It is the one domain type a schema or a route may use directly** — as a query parameter (`status: OrderStatus | None = None`) or a response field (`status: OrderStatus` in `OrderResponse`). Being a `str`, it leaks nothing a client could not see anyway, and FastAPI validates it and lists the allowed values in the OpenAPI description; an unknown one is a 422 before any code runs.
 
 ## Where a rule about several values goes
 

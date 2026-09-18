@@ -6,7 +6,7 @@ What is `async`, what never is, and the one mistake that stalls every request at
 
 | Layer | `async`? | Why |
 | --- | --- | --- |
-| `interfaces` — routes, dependencies | yes | FastAPI awaits them on the event loop |
+| `interfaces` — routes, dependencies | yes, even a dependency that awaits nothing | FastAPI runs a `def` route or dependency in the thread pool, an `async def` one on the event loop |
 | `application` — services, event handlers | yes | they await the repository and the other ports |
 | `infrastructure` — repositories, clients | yes | they do the I/O |
 | `domain` — entities, value objects, domain services | **never** | a rule does not wait for anything |
@@ -81,4 +81,4 @@ This is also the DDD answer: an aggregate is loaded whole or not at all. See `pe
 
 - **Do not create an event loop.** No `asyncio.run` inside the application; FastAPI owns the loop. (`alembic/env.py` does call `asyncio.run` — it is a separate process.)
 - **Do not share an `AsyncSession` between concurrent tasks.** One session per request, from `get_session`; `asyncio.gather` over two queries on the same session raises.
-- **Background work that must survive the request** is not a `asyncio.create_task` fired from a route — the task can be garbage-collected, and nothing reports its failure. For short follow-ups use FastAPI's `BackgroundTasks`; for anything that matters, a queue.
+- **Background work that must survive the request** is not a `asyncio.create_task` fired from a route — nothing keeps a reference to it, and if it fails the only trace is a `Task exception was never retrieved` log line, printed whenever the task happens to be garbage-collected. For short follow-ups use FastAPI's `BackgroundTasks`; for anything that matters, a queue.

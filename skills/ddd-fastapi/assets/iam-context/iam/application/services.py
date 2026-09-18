@@ -38,10 +38,12 @@ class UserApplicationService:
             UsernameTakenError: If the username is in use.
             DomainError: If a role does not exist or the username is blank.
         """
-        if await self._users.exists_by_username(username):
-            raise UsernameTakenError(username)
         roles = [Role.from_name(name) for name in role_names]
         user = User(username, await self._hashing.hash(password), roles)
+        # Checked on the aggregate's username, which is normalized: the raw
+        # input could pass the check and then collide with the unique column.
+        if await self._users.exists_by_username(user.username):
+            raise UsernameTakenError(user.username)
         user = await self._users.save(user)
         await self._unit_of_work.commit()
         return user
@@ -56,7 +58,12 @@ class UserApplicationService:
             InvalidCredentialsError: If the username or the password is wrong.
         """
         user = await self._users.find_by_username(username)
-        if user is None or not await self._hashing.verify(password, user.password_hash):
+        if user is None:
+            # Spend the same time as a wrong password, so the response time
+            # does not tell an unknown username from a known one.
+            await self._hashing.hash(password)
+            raise InvalidCredentialsError()
+        if not await self._hashing.verify(password, user.password_hash):
             raise InvalidCredentialsError()
         return user, self._tokens.generate_token(user.username)
 

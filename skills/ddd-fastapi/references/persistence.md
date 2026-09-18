@@ -158,7 +158,7 @@ So the adapter never asks "is this new?" and never diffs collections by hand; it
 
 ## Queries that are not aggregates
 
-A read that joins several aggregates, aggregates across rows (`count`, `sum`) or feeds a report does not need to rebuild entities. Write it as a method of a query class in `infrastructure/` that returns plain data, behind a port in `application/`, and let the route return it directly. The repository stays about loading and saving aggregates.
+A read that joins several aggregates, aggregates across rows (`count`, `sum`) or feeds a report does not need to rebuild entities. Give it a port of its own — `OrderQueries`, an `ABC` in `application/queries.py` whose methods return plain frozen dataclasses (`OrderSummary`), not aggregates — and an implementation, `SqlAlchemyOrderQueries`, in `infrastructure/queries.py` that selects exactly the columns it needs. The route turns the result into its response schema like any other. The repository stays about loading and saving aggregates.
 
 ## Migrations
 

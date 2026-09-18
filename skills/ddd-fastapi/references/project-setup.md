@@ -46,7 +46,7 @@ Why each floor is where it is:
 
 - **`fastapi[standard]>=0.122`** — `[standard]` brings `uvicorn`, the `fastapi` command and `httpx`. From 0.122 a missing bearer token is answered **401** with `WWW-Authenticate: Bearer`; before it, `HTTPBearer` answered 403.
 - **`sqlalchemy[asyncio]`** — the extra pulls `greenlet`, which the async session needs.
-- **`alembic>=1.16`** — the `alembic.ini` the installer writes uses `path_separator`, which older versions do not know.
+- **`alembic>=1.16`** — the version the shipped setup was run on at its lowest, and the one that introduced `path_separator` in `alembic.ini`. Without that key, current Alembic falls back to legacy path splitting and emits a `DeprecationWarning` (hidden by default); older versions simply ignore it.
 - The IAM context adds `pyjwt` and `pwdlib[argon2]`; `iam.md` says so.
 
 `[tool.uv] package = false` and `[tool.setuptools] packages = []` say the same thing to the two installers: there is nothing here to build. Without the second line, `pip install .` fails on a project laid out like this one, with "Multiple top-level packages discovered in a flat-layout".
@@ -180,15 +180,16 @@ fastapi dev main.py
 `alembic.ini` holds no URL; `alembic/env.py` reads `settings.database_url`, so the database is configured in one place. `env.py` also imports every context's models, because autogenerate compares the database with `Base.metadata`, and a model that was never imported is not in it:
 
 ```python
-from shared.infrastructure.models import Base
-from shared.infrastructure.settings import settings
-
 import customers.infrastructure.models  # noqa: F401
 import iam.infrastructure.models  # noqa: F401
 import ordering.infrastructure.models  # noqa: F401
+from shared.infrastructure.models import Base
+from shared.infrastructure.settings import settings
 
 target_metadata = Base.metadata
 ```
+
+That is the order `ruff check --fix` leaves them in; paste each new context's line anywhere in the block and let it sort.
 
 The workflow, every time a model changes:
 
@@ -200,6 +201,6 @@ alembic revision --autogenerate -m "add delivery address to orders"
 alembic upgrade head
 ```
 
-**Read the generated file before upgrading.** Autogenerate is a diff, not a mind reader: it sees a renamed column as a drop and an add, which loses the data, and it does not see changes to a `server_default` or to an enum's values unless asked. The file is ordinary Python; fix it and commit it with the model change. `alembic downgrade -1` undoes the last one; `alembic upgrade head --sql` prints the SQL instead of running it.
+**Read the generated file before upgrading.** Autogenerate is a diff, not a mind reader: it sees a renamed column as a drop and an add, which loses the data, and it does not compare a changed `server_default` unless `env.py` sets `compare_server_default=True`. The file is ordinary Python; fix it and commit it with the model change. `alembic downgrade -1` undoes the last one; `alembic upgrade head --sql` prints the SQL instead of running it.
 
 The application never calls `Base.metadata.create_all()`. Creating tables at start-up is fine for a demo and a trap for anything with data: it creates what is missing and never changes what exists, so the first renamed column silently diverges from the code.

@@ -9,10 +9,10 @@ from fastapi import Depends
 
 from __context__.application.services import __Entity__ApplicationService
 from __context__.infrastructure.repositories import SqlAlchemy__Entity__Repository
-from shared.infrastructure.database import SessionDep
+from shared.interfaces.dependencies import SessionDep
 
 
-def get___entity___service(session: SessionDep) -> __Entity__ApplicationService:
+async def get___entity___service(session: SessionDep) -> __Entity__ApplicationService:
     """Build the application service on the request's session.
 
     Args:

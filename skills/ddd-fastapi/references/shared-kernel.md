@@ -15,9 +15,10 @@ shared/
 │   └── events.py            EventBus and the process-wide event_bus
 ├── infrastructure/
 │   ├── settings.py          Settings and the process-wide settings
-│   ├── database.py          engine, session_factory, get_session, SessionDep
+│   ├── database.py          engine, session_factory
 │   └── models.py            Base with the naming convention, AuditableModel
 └── interfaces/
+    ├── dependencies.py      get_session, SessionDep
     ├── exception_handlers.py  domain exception → status code
     └── schemas.py           ErrorResponse, MessageResponse, error_responses()
 ```
@@ -61,7 +62,7 @@ The service sees `UnitOfWork`; it cannot run a query through it, which is the po
 
 **`settings`** is read once, at import. See `project-setup.md`.
 
-**`database.py`** holds one async engine per process and a `get_session` dependency that yields one session per request:
+**`database.py`** holds one async engine per process and the factory every session comes from:
 
 ```python
 engine = create_async_engine(settings.database_url, echo=settings.database_echo, pool_pre_ping=True)
@@ -69,8 +70,11 @@ engine = create_async_engine(settings.database_url, echo=settings.database_echo,
 # expire_on_commit=False: with the default, reading any attribute after a
 # commit triggers a lazy refresh, which an async session cannot do implicitly.
 session_factory = async_sessionmaker(engine, expire_on_commit=False)
+```
 
+A request gets its session from the `get_session` dependency, which lives in `shared/interfaces/dependencies.py` — it is HTTP wiring, and `infrastructure` never imports FastAPI:
 
+```python
 async def get_session() -> AsyncIterator[AsyncSession]:
     async with session_factory() as session:
         yield session
@@ -78,6 +82,8 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 ```
+
+A script or an event handler opens its own with `async with session_factory() as session:`.
 
 The session **never commits by itself**. Closing it without a commit rolls back — measured: a customer saved and flushed (it even had its id) was not there for the next session. Commit is the application service's call, through `UnitOfWork`. The dependency does not commit in its teardown either, and that is measured too: when the code after `yield` in a dependency raised, the client had **already received its 200**. A commit that failed there would report success for a change that was never made.
 
@@ -109,6 +115,8 @@ class OrderModel(AuditableModel, Base):
 The timestamps belong to the table, not to the aggregate: the domain does not read them. When a rule does need a moment — "an order can be cancelled within ten minutes of placing it" — that moment is a domain attribute, `placed_at`, set by `place()`, not the row's `updated_at`.
 
 ## `interfaces/`
+
+**`SessionDep`** is what every context's `interfaces/dependencies.py` builds its application service on; see above.
 
 **`register_exception_handlers(app)`** installs the one handler that turns the kernel's exceptions into responses. See `exceptions.md`.
 

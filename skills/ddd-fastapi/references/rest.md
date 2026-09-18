@@ -99,7 +99,7 @@ class CustomerResponse(BaseModel):
 `interfaces/dependencies.py` builds the application service for a request and exposes it as an `Annotated` alias:
 
 ```python
-def get_order_service(session: SessionDep) -> OrderApplicationService:
+async def get_order_service(session: SessionDep) -> OrderApplicationService:
     """Build the application service on the request's session."""
     return OrderApplicationService(
         SqlAlchemyOrderRepository(session),
@@ -114,6 +114,7 @@ OrderServiceDep = Annotated[OrderApplicationService, Depends(get_order_service)]
 
 - **It is the one place where ports meet adapters.** The service knows `OrderRepository`; only this function knows `SqlAlchemyOrderRepository`. Replacing an adapter — or giving a test an in-memory one with `app.dependency_overrides[get_order_service] = …` — touches nothing else.
 - **Every collaborator shares the request's session**, so everything the use case reads and writes is one transaction.
+- **It is `async def` although it awaits nothing.** FastAPI runs a plain `def` dependency in the thread pool — measured: it ran on an AnyIO worker thread, the `async def` one on the event loop — which would cost every request a thread hop to build three objects.
 - **The alias keeps signatures short**: `service: OrderServiceDep`. FastAPI caches dependencies within a request, so `get_session` runs once even when several dependencies ask for it.
 
 ## Protecting routers

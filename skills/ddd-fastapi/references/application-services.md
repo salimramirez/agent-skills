@@ -79,7 +79,7 @@ What it never does: decide a business rule. If a line of the service reads `if o
 
 ## One service, commands and queries together
 
-Reads (`get_order_by_id`, `get_all_orders`) and writes (`open_order`, `place_order`) are methods of the same class. A write method often begins with the read (`place_order` calls `get_order_by_id`), and one class keeps that reuse free. When the reads of a context grow into something different — reports, joins across aggregates, a denormalized view — give them their own `OrderQueries` class in `application/queries.py` that returns response-ready data, and leave the aggregate out of them.
+Reads (`get_order_by_id`, `get_all_orders`) and writes (`open_order`, `place_order`) are methods of the same class. A write method often begins with the read (`place_order` calls `get_order_by_id`), and one class keeps that reuse free. When the reads of a context grow into something different — reports, joins across aggregates, a denormalized view — give them their own port, as `persistence.md` describes under "Queries that are not aggregates", and leave the aggregate out of them.
 
 ## The unit of work is the transaction
 
@@ -108,7 +108,9 @@ Raising for a missing aggregate in the service — rather than returning `None` 
 `open_order(customer_id: int, delivery_address: str)`, never `open_order(request: OpenOrderRequest)`. The service belongs to the application layer and must not import from `interfaces`; a schema is an HTTP concern. When a use case takes many arguments, keyword arguments from the route keep the call readable:
 
 ```python
-order = await service.add_line(order_id, request.dish_name, request.quantity, request.unit_price)
+order = await service.add_line(
+    order_id, dish_name=request.dish_name, quantity=request.quantity, unit_price=request.unit_price
+)
 ```
 
 ## What it may import

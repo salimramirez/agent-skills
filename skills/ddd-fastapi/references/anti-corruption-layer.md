@@ -64,7 +64,7 @@ class ExternalCustomerService:
 The consumer's `interfaces/dependencies.py` builds the chain on the request's session:
 
 ```python
-def get_order_service(session: SessionDep) -> OrderApplicationService:
+async def get_order_service(session: SessionDep) -> OrderApplicationService:
     return OrderApplicationService(
         SqlAlchemyOrderRepository(session),
         ExternalCustomerService(CustomersContextFacade(session)),

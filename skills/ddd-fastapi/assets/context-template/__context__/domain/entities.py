@@ -26,8 +26,13 @@ class __Entity__(AggregateRoot):
             DomainError: If the name is blank.
         """
         super().__init__()
-        self.id = id
+        self._id = id
         self._name = self._require_name(name)
+
+    @property
+    def id(self) -> int | None:
+        """Identity assigned by the first save; ``None`` before it."""
+        return self._id
 
     @property
     def name(self) -> str:
