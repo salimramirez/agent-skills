@@ -1,0 +1,44 @@
+[project]
+name = "__project_name__"
+version = "0.1.0"
+description = "__project_title__ API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.122",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "alembic>=1.16",
+    "pydantic-settings>=2.6",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+# An application, not a library: install its dependencies, never the project itself.
+# The directories next to main.py are bounded contexts, not packages to distribute.
+[tool.uv]
+package = false
+
+[tool.setuptools]
+packages = []
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+
+[tool.ruff.lint.isort]
+# The local alembic/ directory would otherwise make the package look first-party.
+known-third-party = ["alembic"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["alembic/"]
