@@ -1,0 +1,62 @@
+[
+  {
+    "query": "tengo una web api en asp.net core con controllers que hacen todo con el DbContext directamente. quiero pasarla a ddd con capas, por dónde empiezo",
+    "expect": "ddd-aspnet-core"
+  },
+  {
+    "query": "en c# con ef core, cómo mapeo un value object Money dentro de una entidad hija sin que el dominio dependa de entity framework",
+    "expect": "ddd-aspnet-core"
+  },
+  {
+    "query": "my .NET 10 API returns 500 when a business rule fails; I want the aggregate to enforce it and the client to get a proper 409 problem details",
+    "expect": "ddd-aspnet-core"
+  },
+  {
+    "query": "cómo armo un bounded context de pedidos en asp.net core: agregado, repositorio, command service y el controller",
+    "expect": "ddd-aspnet-core"
+  },
+  {
+    "query": "quiero publicar eventos de dominio después del SaveChanges en .net sin usar mediatr",
+    "expect": "ddd-aspnet-core"
+  },
+  {
+    "query": "en spring boot, mi OrderService tiene toda la lógica y la entidad Order solo getters y setters. cómo muevo las reglas al agregado",
+    "expect": "ddd-spring-boot"
+  },
+  {
+    "query": "how do I model a value object as a JPA embeddable in a Spring Boot DDD project",
+    "expect": "ddd-spring-boot"
+  },
+  {
+    "query": "en fastapi con sqlalchemy async, dónde va el repositorio y cómo separo el modelo orm del agregado",
+    "expect": "ddd-fastapi"
+  },
+  {
+    "query": "structuring a python fastapi service into bounded contexts with domain, application, infrastructure and interfaces",
+    "expect": "ddd-fastapi"
+  },
+  {
+    "query": "vamos a hacer un eventstorming del proceso de reservas y no sé cómo sacar los bounded contexts",
+    "expect": "ddd-playbook"
+  },
+  {
+    "query": "tengo una api en nestjs y quiero organizarla por dominio con agregados y capas",
+    "expect": null
+  },
+  {
+    "query": "how do I structure a Go service with DDD, aggregates and repositories",
+    "expect": null
+  },
+  {
+    "query": "cómo configuro serilog para que escriba en archivo en .net 10",
+    "expect": null
+  },
+  {
+    "query": "en blazor, cómo comparto estado entre dos componentes de la misma página",
+    "expect": null
+  },
+  {
+    "query": "my ef core migration fails with 'There is already an object named' on sql server, how do I fix it",
+    "expect": null
+  }
+]

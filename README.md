@@ -4,7 +4,7 @@ A collection of [Agent Skills](https://agentskills.io) — portable, model-agnos
 
 ## Skills
 
-Six skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
+Seven skills for Domain-Driven Design: one for modeling a domain, and one per stack for writing the code. Each uses progressive disclosure — a lean `SKILL.md` with the decision rules, plus reference files loaded only when the task needs them.
 
 They share a core block of DDD design rules, duplicated on purpose so that **every one of them works on its own**. Install only the stack skill you need, or the playbook alongside it when the work is modeling rather than coding.
 
@@ -29,6 +29,14 @@ Bounded contexts as top-level packages with four layers and one module per kind 
 Like `ddd-spring-boot` it is an **opinionated** house style, lighter where Python leaves room for taste, and it ships code: `scripts/install.py` writes a new project with the shared kernel or an IAM context with sign-up, sign-in and JWT, and `scripts/new-context.py` scaffolds a whole bounded context. Every framework claim in it was checked by running the code — that a blocking call inside `async def` stalls every request, that an async session cannot refresh after a commit or lazy-load a relationship, that a commit in a dependency's teardown runs after the client already has its response.
 
 FastAPI 0.122+ on Python 3.12+, SQLAlchemy 2 async over PostgreSQL, Alembic, Pydantic v2.
+
+### `ddd-aspnet-core` — writing it in ASP.NET Core / C#
+
+Bounded contexts as folders with four layers, aggregate roots with behavior mapped by EF Core configurations that keep the domain free of persistence attributes, value objects as records that validate, command and query services, a hybrid error model — the domain throws, a command service returns a result for the outcomes it can expect — with every failure leaving as RFC 9457 problem details, domain events dispatched after the commit without a mediator library, anti-corruption layers, and the REST interface with resources and assemblers.
+
+Like its backend siblings it is an **opinionated** house style and it ships code: `scripts/install.py` writes a new project with the shared kernel or an IAM context with sign-up, sign-in, JWT bearer authentication and roles, and `scripts/new-context.py` scaffolds a whole bounded context — refusing the names that would not compile. Every framework claim in it was checked by running the code — that the MySQL provider stores a collection of primitives as its `ToString()`, that EF Core 10 starts with a forgotten migration and only logs it, that `[Produces("application/json")]` changes the content type of problem details, that a column narrower than the domain turns a client error into a 500.
+
+.NET 10, ASP.NET Core controllers, EF Core 10 over MySQL — and, after four documented edits, PostgreSQL — Swashbuckle or Scalar.
 
 ### `ddd-angular` — writing it in Angular
 
@@ -68,6 +76,10 @@ npx skills add salimramirez/agent-skills --skill ddd-spring-boot
 
 ```bash
 npx skills add salimramirez/agent-skills --skill ddd-fastapi
+```
+
+```bash
+npx skills add salimramirez/agent-skills --skill ddd-aspnet-core
 ```
 
 ```bash
