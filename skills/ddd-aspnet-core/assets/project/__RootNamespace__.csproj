@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>__RootNamespace__</RootNamespace>
+        <!-- The XML comments feed the API description; a public member without one is a warning -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <UserSecretsId>__UserSecretsId__</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Persistence: EF Core over MySQL, and the design-time tools for migrations -->
+        <PackageReference Include="MySql.EntityFrameworkCore" Version="10.0.9"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <!-- Naming: plural snake_case tables, kebab-case routes -->
+        <PackageReference Include="Humanizer.Core" Version="3.0.10"/>
+        <!-- API description and Swagger UI -->
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.0"/>
+    </ItemGroup>
+
+</Project>
