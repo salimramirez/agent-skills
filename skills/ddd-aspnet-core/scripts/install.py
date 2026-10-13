@@ -227,7 +227,8 @@ def main():
         )
         return 1
 
-    http_port = str(random.randint(5000, 5300))
+    # Not 5000: macOS keeps it (and 7000) for the AirPlay Receiver.
+    http_port = str(random.randint(5001, 5299))
     mapping = {
         "__RootNamespace__": namespace,
         "__Title__": title_from(namespace),

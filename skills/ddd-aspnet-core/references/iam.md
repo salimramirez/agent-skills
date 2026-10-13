@@ -127,6 +127,7 @@ Measured: a token with `ROLE_USER` is answered **403** with a problem details bo
 ## What to adapt
 
 - **`Role`** — `User` and `Admin` are placeholders. Name the roles in the ubiquitous language (`Customer`, `Courier`, `RestaurantManager`), and their wire names in `RoleNames`; the `ROLE_` prefix keeps the API compatible with the other backends of this collection.
+- **Who may become an admin.** The public sign-up grants whatever roles it is sent: an anonymous `{"roles": ["ROLE_ADMIN"]}` is answered 201 with `ROLE_ADMIN` (measured). That is the contract the other backends of this collection share, and convenient in class, where one person tests both sides. Before anything real, close it: sign-up ignores `roles` and gives `ROLE_USER`, and roles are granted by an endpoint that itself requires `[Authorize(Roles = RoleNames.Admin)]`, with the first admin seeded at start-up.
 - **The public surface** — today, sign-up and sign-in. Anything else that must be public carries `[AllowAnonymous]`.
 - **The lifetime of a token** — `TokenSettings:ExpirationDays`, seven by default.
 - **A user deleted while holding a token.** JWT bearer validates the signature and the expiry; it does not ask whether the user still exists, so a deleted user's token keeps working until it expires (measured). If that matters, ask the IAM context on every request — one query each — in `AddIamContext`:

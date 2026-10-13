@@ -11,14 +11,18 @@ namespace __RootNamespace__.Shared.Infrastructure.Persistence.EntityFrameworkCor
 public static class ModelBuilderExtensions
 {
     /// <summary>
-    ///     Keeps the domain events out of the model: they are dispatched, never stored.
+    ///     Configures what every aggregate root inherits: the domain events stay out of the model, since they are
+    ///     dispatched and never stored, and <c>Version</c> is checked on every update and delete.
     /// </summary>
     /// <param name="builder">The model builder.</param>
-    public static void IgnoreDomainEvents(this ModelBuilder builder)
+    public static void ConfigureAggregateRoots(this ModelBuilder builder)
     {
         foreach (var entity in builder.Model.GetEntityTypes()
                      .Where(entity => typeof(AuditableAggregateRoot).IsAssignableFrom(entity.ClrType)))
+        {
             builder.Entity(entity.ClrType).Ignore(nameof(AuditableAggregateRoot.DomainEvents));
+            builder.Entity(entity.ClrType).Property(nameof(AuditableAggregateRoot.Version)).IsConcurrencyToken();
+        }
     }
 
     /// <summary>
@@ -28,6 +32,8 @@ public static class ModelBuilderExtensions
     /// <param name="builder">The model builder.</param>
     public static void UseSnakeCaseNamingConvention(this ModelBuilder builder)
     {
+        // First every table and column: a foreign key's name is made from both of its tables, so the
+        // constraints are named only once every table has its final name.
         foreach (var entity in builder.Model.GetEntityTypes())
         {
             var tableName = entity.GetTableName();
@@ -42,7 +48,10 @@ public static class ModelBuilderExtensions
                 RenameComplexColumns(complexProperty, table);
 
             entity.SetTableName(tableName.Pluralize(false).Underscore());
+        }
 
+        foreach (var entity in builder.Model.GetEntityTypes().Where(entity => entity.GetTableName() is not null))
+        {
             foreach (var key in entity.GetKeys())
                 key.SetName(key.GetName()!.Underscore());
             foreach (var foreignKey in entity.GetForeignKeys())

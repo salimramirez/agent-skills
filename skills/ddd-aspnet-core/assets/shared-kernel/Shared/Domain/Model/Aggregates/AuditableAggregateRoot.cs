@@ -3,13 +3,15 @@ using __RootNamespace__.Shared.Domain.Model.Events;
 namespace __RootNamespace__.Shared.Domain.Model.Aggregates;
 
 /// <summary>
-///     Base class of every aggregate root: the identity the database assigns, the audit timestamps,
-///     and the domain events raised since the aggregate was loaded.
+///     Base class of every aggregate root: the identity the database assigns, the audit timestamps, the
+///     version that keeps two concurrent changes from both succeeding, and the domain events raised since the
+///     aggregate was loaded.
 /// </summary>
 /// <remarks>
-///     Nothing in the domain writes <see cref="Id" />, <see cref="CreatedAt" /> or <see cref="UpdatedAt" />:
-///     the database assigns the first on insert, and the persistence layer sets the other two on every save.
-///     The unit of work dispatches <see cref="DomainEvents" /> after the commit and clears them.
+///     Nothing in the domain writes <see cref="Id" />, <see cref="Version" />, <see cref="CreatedAt" /> or
+///     <see cref="UpdatedAt" />: the database assigns the first on insert, and the persistence layer sets the
+///     others on every save. The unit of work dispatches <see cref="DomainEvents" /> after the commit and
+///     clears them.
 /// </remarks>
 public abstract class AuditableAggregateRoot
 {
@@ -19,6 +21,12 @@ public abstract class AuditableAggregateRoot
     ///     Gets the identity the database assigned on the first save; <c>0</c> before it.
     /// </summary>
     public int Id { get; private set; }
+
+    /// <summary>
+    ///     Gets how many times the aggregate has been saved. A save made from an older version is refused, so of
+    ///     two requests that changed the same aggregate at once, only the first one commits.
+    /// </summary>
+    public int Version { get; private set; }
 
     /// <summary>
     ///     Gets when the aggregate was first saved.

@@ -99,12 +99,22 @@ def pluralize(words):
     return words[:-1] + [plural]
 
 
+def article(phrase):
+    """'a' or 'an' for a phrase, by how its first word sounds, not how it is spelled."""
+    word = phrase.split(" ")[0]
+    if re.match(r"(uni|use|usa|usu|uti|ure|uro|eu|one|once)", word):
+        return "a"
+    if re.match(r"(hour|honest|honor|honour|heir)", word):
+        return "an"
+    return "an" if word[0] in "aeiou" else "a"
+
+
 def replacements(root_namespace, context, entity, plural):
     context_words = split_words(context)
     entity_words = split_words(entity)
     plural_words = split_words(plural) if plural else pluralize(entity_words)
     entity_phrase = " ".join(entity_words)
-    a_entity = ("an " if entity_phrase[0] in "aeiou" else "a ") + entity_phrase
+    a_entity = f"{article(entity_phrase)} {entity_phrase}"
     return {
         "__RootNamespace__": root_namespace,
         "__Context__": pascal(context_words),
@@ -158,6 +168,28 @@ def root_namespace_of(csproj):
     """The <RootNamespace> of a project, or its file name, which is what MSBuild uses by default."""
     match = re.search(r"<RootNamespace>\s*([^<\s]+)\s*</RootNamespace>", csproj.read_text(encoding="utf-8"))
     return match.group(1) if match else csproj.stem
+
+
+def taken_elsewhere(root, mapping):
+    """Say what another context already has under the same names, or return None.
+
+    One database context maps every bounded context, and one route table serves every controller: an entity
+    with the same name in two contexts is the same table (EF Core refuses the model), and two controllers with
+    the same name answer at the same route (every request to it is a 500). Both were measured.
+    """
+    context, entity, entities = mapping["__Context__"], mapping["__Entity__"], mapping["__Entities__"]
+    for other in sorted(d for d in root.iterdir() if d.is_dir() and d.name != context):
+        for folder in ("Aggregates", "Entities"):
+            if (other / "Domain" / "Model" / folder / f"{entity}.cs").exists():
+                return (f"{other.name} already has an entity named {entity}: both would be stored in the same table, "
+                        f"and EF Core refuses the model. Name this one in {context}'s own language -- two contexts "
+                        f"rarely mean the same thing by one word -- or write it by hand with its own table "
+                        f"(ToTable) and its own route; see references/persistence.md.")
+        if (other / "Interfaces" / "Rest" / f"{entities}Controller.cs").exists():
+            return (f"{other.name} already has a {entities}Controller at /api/v1/{mapping['__entities-kebab__']}: "
+                    f"two controllers at one route make every request to it fail. Give the entity a name of "
+                    f"its own in {context}.")
+    return None
 
 
 def name_problem(mapping):
@@ -235,7 +267,7 @@ def main():
         if not re.fullmatch(r"[A-Z][A-Za-z0-9]*", mapping[token]):
             print(f"{mapping[token]!r} is not a valid C# type name", file=sys.stderr)
             return 1
-    problem = name_problem(mapping)
+    problem = name_problem(mapping) or taken_elsewhere(root, mapping)
     if problem:
         print(problem, file=sys.stderr)
         return 1

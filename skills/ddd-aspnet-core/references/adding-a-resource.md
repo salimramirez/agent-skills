@@ -19,7 +19,7 @@ builder.Services.AddMenuManagementContext();      // in Program.cs, under "// Bo
 dotnet ef migrations add AddMenuManagement
 ```
 
-After those, the context runs: `/api/v1/menu-items` creates, reads, updates and deletes, answers 404, 409 and 400 with problem details, and is protected if the IAM context is in. The generator derives every spelling from the two names — `MenuItem`, `MenuItems`, `menuItem`, `menu-items`, "a menu item" — and refuses names that would not compile: a context named like its entity, an entity named like a type every file already sees (`Task`, `Path`, `Result`…), or one whose camelCase is a C# keyword (`Event`). `--plural People` fixes an irregular plural.
+After those, the context runs: `/api/v1/menu-items` creates, reads, updates and deletes, answers 404, 409 and 400 with problem details, and is protected if the IAM context is in. The generator derives every spelling from the two names — `MenuItem`, `MenuItems`, `menuItem`, `menu-items`, "a menu item" — and refuses names that would not compile: a context named like its entity, an entity named like a type every file already sees (`Task`, `Path`, `Result`…), one whose camelCase is a C# keyword (`Event`), or one another context already has as an aggregate, an entity or a controller — two `Product`s share a table and a route (see `structure.md`). `--plural People` fixes an irregular plural.
 
 Then **model the real aggregate**: the `Name` is a placeholder. Replace it with the attributes the domain experts talk about, and walk outward in the order below.
 
@@ -70,8 +70,9 @@ Adding a second aggregate to an existing context is the same list without the sc
 - [ ] Commands answered through `ToActionResult`; a query's `null` answered with `Problem(…, 404)`.
 - [ ] Every action has a `<summary>`, a `<response>` per status, and the matching `[ProducesResponseType]`.
 - [ ] No domain type in a resource or an action's signature.
+- [ ] Every parameter of a request resource is required; an optional one is nullable *and* has a default (`string? Notes = null`).
 
 **Running it**
 - [ ] `dotnet build` gives no warnings — a public member without an XML comment is one.
 - [ ] The start-up log has no `fail:` line about pending model changes.
-- [ ] Each endpoint answered the codes its comments promise: the success, 400 for a blank value, 404 for a missing id, 409 for a broken rule — and 401 without a token, if the IAM context is in.
+- [ ] Each endpoint answered the codes its comments promise: the success, 400 for a blank or a missing value, 404 for a missing id, 409 for a broken rule — and 401 without a token, if the IAM context is in.

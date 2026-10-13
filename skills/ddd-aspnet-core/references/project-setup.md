@@ -14,7 +14,7 @@ dotnet tool restore
 dotnet build
 ```
 
-`install.py project` writes `QuickBite.Platform.csproj`, `Program.cs`, the two settings files, the launch profile, the `dotnet-ef` tool manifest (`dotnet-tools.json`, at the root, which is where the .NET 10 SDK's `dotnet new tool-manifest` puts it), a `.gitignore`, and the shared kernel. The project builds and starts with no bounded context yet; add one with `new-context.py` and its migration (see `adding-a-resource.md`).
+`install.py project` writes `QuickBite.Platform.csproj`, `Program.cs`, the two settings files, the launch profile (on a random port between 5001 and 5299 — not 5000, which macOS keeps for the AirPlay Receiver: a request there is answered `403` by `AirTunes`, measured), the `dotnet-ef` tool manifest (`dotnet-tools.json`, at the root, which is where the .NET 10 SDK's `dotnet new tool-manifest` puts it), a `.gitignore`, and the shared kernel. The project builds and starts with no bounded context yet; add one with `new-context.py` and its migration (see `adding-a-resource.md`).
 
 The skill lives under `.claude/skills/` inside the project, `.cs` assets included, and the build ignores it: the .NET SDK leaves out folders whose name starts with a dot (measured — the project built with no errors from the placeholders in the skill's templates).
 
@@ -59,12 +59,14 @@ builder.Services.AddControllers(options =>
     options.Conventions.Add(new RouteTokenTransformerConvention(new KebabCaseParameterTransformer()));
     options.OutputFormatters.RemoveType<StringOutputFormatter>();
     options.OutputFormatters.OfType<SystemTextJsonOutputFormatter>().Single().SupportedMediaTypes.Remove("text/json");
-});
+}).AddJsonOptions(options =>
+    // A missing value-type property (a price, a quantity) is a 400, not a silent 0
+    options.JsonSerializerOptions.RespectRequiredConstructorParameters = true);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 ```
 
-Controllers answer at kebab-case routes (`MenuItemsController` → `/api/v1/menu-items`), in JSON only — the two formatter lines take `text/plain` and `text/json` out of the API description, where every response otherwise lists them. `AddProblemDetails` and the kernel's exception handler make every failure an RFC 9457 body — see `exceptions.md`.
+Controllers answer at kebab-case routes (`MenuItemsController` → `/api/v1/menu-items`), in JSON only — the two formatter lines take `text/plain` and `text/json` out of the API description, where every response otherwise lists them. `RespectRequiredConstructorParameters` makes every constructor parameter of a request resource required: without it, a body with no `unitPrice` reached the domain as a price of `0` (measured) — see `rest.md`. `AddProblemDetails` and the kernel's exception handler make every failure an RFC 9457 body — see `exceptions.md`.
 
 ```csharp
 builder.Services.AddCors(options => options.AddPolicy("AllowAllPolicy",
@@ -90,6 +92,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "QuickBite Platform API", Version = "v1" });
     options.IncludeXmlComments(typeof(Program).Assembly);
+    options.CustomSchemaIds(OpenApiSchemaIds.For);
     options.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT",
@@ -102,7 +105,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 ```
 
-The XML comments become the description of every operation and response. The security scheme is what puts the **Authorize** button in Swagger UI; the name in `AddSecurityDefinition` and the one in `OpenApiSecuritySchemeReference` must be the same string. With a mismatch the document's requirement comes out empty (`"security": [{}]`): the button still authorizes, no operation sends the header, and every protected call answers 401 (measured).
+The XML comments become the description of every operation and response. `CustomSchemaIds` names each schema after its context (`Ordering.MoneyResource`): with the default — the bare type name — a second context with a `MoneyResource` makes `swagger.json` a 500 (`Can't use schemaId "$MoneyResource" for type "$…". The same schemaId is already used for type "$…"`, measured). The security scheme is what puts the **Authorize** button in Swagger UI; the name in `AddSecurityDefinition` and the one in `OpenApiSecuritySchemeReference` must be the same string. With a mismatch the document's requirement comes out empty (`"security": [{}]`): the button still authorizes, no operation sends the header, and every protected call answers 401 (measured).
 
 ```csharp
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -182,7 +185,7 @@ Read every migration before running it: it is generated from the difference betw
 
 ## Switching to PostgreSQL
 
-Verified end to end against PostgreSQL 17, with the IAM context and a generated context. Four edits and a new set of migrations; nothing in any bounded context changes.
+Verified end to end against PostgreSQL 17, with the IAM context, a generated context and an aggregate with parts. Four edits and a new set of migrations; nothing in any bounded context changes.
 
 1. The provider package:
    ```bash
@@ -191,11 +194,13 @@ Verified end to end against PostgreSQL 17, with the IAM context and a generated 
    ```
 2. In `Program.cs`, `options.UseMySQL(connectionString)` becomes `options.UseNpgsql(connectionString)`.
 3. The connection string: `Host=localhost;Port=5432;Database=quickbite_platform;Username=postgres;Password=…`.
-4. The one line of the kernel that knows the database, in `Shared/Infrastructure/Persistence/EntityFrameworkCore/Extensions/DbUpdateExceptionExtensions.cs`:
+4. The two lines of the kernel that know the database, in `Shared/Infrastructure/Persistence/EntityFrameworkCore/Extensions/DbUpdateExceptionExtensions.cs`:
    ```csharp
    using Npgsql;
    …
    return exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
+   …
+   return exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.DeadlockDetected };
    ```
 5. Delete `Migrations/` and create them again: `dotnet ef migrations add InitialCreate`. Migrations carry provider-specific annotations and column types; they do not move between providers.
 
@@ -204,6 +209,7 @@ What behaves differently afterwards, measured:
 - **Text comparison is case-sensitive.** MySQL's default collation (`utf8mb4_0900_ai_ci`) ignores case and accents, so a unique name rejects `lomo SALTADO` once `Lomo saltado` exists; PostgreSQL accepts it. Where the domain must treat two spellings as one, it normalizes the value itself — `EmailAddress` and the IAM username lower-case what they store — and then both databases agree.
 - **`DateTimeOffset` becomes `timestamp with time zone`**, kept to the microsecond.
 - **The unique-index conflict still answers 409**: under concurrent requests for the same name, the ones that got past the service's check hit the index and came back as 409 through the changed line, none as 500.
+- **Concurrent changes to one aggregate answer 409 without a deadlock.** Ten lines added to one order at once, and ten placements of it: 201s or a single 200, the rest 409, one notification to the kitchen — as on MySQL, where the lines race goes through a deadlock first (see `aggregates.md`).
 
 ## OpenAPI with Scalar instead of Swagger UI
 
@@ -243,13 +249,21 @@ The web API template no longer includes Swashbuckle (since .NET 9; the .NET 10 t
    ```
 3. In `Program.cs`, the `AddSwaggerGen(...)` block becomes
    ```csharp
-   builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
+   builder.Services.AddOpenApi(options =>
+   {
+       options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+       // Name each schema after its context, as Swagger UI does: Ordering.MoneyResource
+       options.CreateSchemaReferenceId = type =>
+           OpenApiOptions.CreateDefaultSchemaReferenceId(type) is null ? null : OpenApiSchemaIds.For(type.Type);
+   });
    ```
    and, in the pipeline, `UseSwagger()` and `UseSwaggerUI()` become
    ```csharp
    app.MapOpenApi().AllowAnonymous();
    app.MapScalarApiReference().AllowAnonymous();
    ```
-   with `using Scalar.AspNetCore;` in place of `using Microsoft.OpenApi;`.
+   with `using Microsoft.AspNetCore.OpenApi;` and `using Scalar.AspNetCore;` in place of `using Microsoft.OpenApi;`.
+
+**Keep `CreateSchemaReferenceId`.** Without it, two contexts' `MoneyResource` are not an error here: the document describes both with whichever schema came first, and the other context's operations are documented with the wrong fields (measured). The default function returns `null` for the types it writes inline (strings, numbers); the check keeps them inline.
 
 **The `.AllowAnonymous()` is not optional once the IAM context is in.** Swagger UI is middleware and runs before authorization; the document and Scalar are endpoints, and the policy that protects every endpoint answers them with 401 (measured). The document is at `/openapi/v1.json`; the reference at `/scalar`, where the **Authentication** section takes the token and adds it to every request it builds (measured).

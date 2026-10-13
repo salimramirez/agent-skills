@@ -16,6 +16,7 @@ The domain is the same whichever way the application layer goes: it throws. What
 | --- | --- | --- | --- |
 | A value the domain cannot accept | `InvalidValueException` | 400 | `DomainExceptionHandler` |
 | An operation the aggregate refuses in its state | `BusinessRuleViolationException` | 409 | `DomainExceptionHandler` |
+| Another request saved the same aggregate first | `DbUpdateConcurrencyException`, or a deadlock the database broke | 409 | `DomainExceptionHandler` |
 | A value a unique index already holds | `DbUpdateException` from the database | 409 | `DomainExceptionHandler` |
 | What the use case acts on does not exist | `Result.NotFound(...)` | 404 | `ToActionResult` |
 | The request conflicts with what exists | `Result.Conflict(...)` | 409 | `ToActionResult` |
@@ -45,6 +46,8 @@ The message is written for the client, in the ubiquitous language, and becomes t
 ```csharp
 public sealed class DomainExceptionHandler(IProblemDetailsService problemDetailsService) : IExceptionHandler
 {
+    private const string LostRace = "Another request changed this resource first. Read it again and retry.";
+
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
@@ -52,7 +55,9 @@ public sealed class DomainExceptionHandler(IProblemDetailsService problemDetails
         {
             InvalidValueException => new Error(ErrorKind.Invalid, exception.Message),
             BusinessRuleViolationException => new Error(ErrorKind.Conflict, exception.Message),
-            DbUpdateException updateException when updateException.IsUniqueConstraintViolation() =>
+            DbUpdateConcurrencyException => new Error(ErrorKind.Conflict, LostRace),
+            DbUpdateException deadlock when deadlock.IsDeadlock() => new Error(ErrorKind.Conflict, LostRace),
+            DbUpdateException duplicate when duplicate.IsUniqueConstraintViolation() =>
                 new Error(ErrorKind.Conflict, "The request conflicts with a value that already exists."),
             _ => null
         };
@@ -70,6 +75,7 @@ public sealed class DomainExceptionHandler(IProblemDetailsService problemDetails
 ```
 
 - **It answers what it recognizes and returns `false` for the rest**, which the default handler answers with a 500 and logs with its stack trace. The 500's body says nothing about the cause — `"title": "An error occurred while processing your request."` — in development too, because `UseExceptionHandler` catches it before the developer exception page would (measured).
+- **A save that lost a race is a 409, not a 500.** Every aggregate root carries a `Version`; of two requests that change the same order at once, the one that commits second finds the version moved and EF Core throws `DbUpdateConcurrencyException` (see `aggregates.md`). On MySQL, two saves that each add a part to one aggregate can deadlock instead, and the database rolls one back; that is the same lost race, with the same answer. Both arms come before the unique-index one: the concurrency exception is a `DbUpdateException` too.
 - **A unique-index conflict gets a fixed message.** The database's own ("Duplicate entry 'ana@example.com' for key 'customers.ix_customers_email'") names tables and indexes; the client gets "The request conflicts with a value that already exists."
 - **A context with an exception of its own** adds it to this switch, or registers a second `IExceptionHandler` before this one. Most contexts need neither: `InvalidValueException`, `BusinessRuleViolationException` and the results cover them.
 

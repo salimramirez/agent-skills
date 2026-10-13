@@ -79,7 +79,7 @@ The rules this skill applies by default. Each one is expanded, with its reason, 
 - **A bounded context is a folder** next to `Program.cs`, with `Domain/`, `Application/`, `Infrastructure/` and `Interfaces/` inside it, always with the same subfolders. The namespace follows the folder. `Shared/` is the kernel and stays small.
 - **Commands and queries are records in `Domain/Model`.** A `PlaceOrderCommand` is a sentence in the ubiquitous language, not a DTO.
 - **Service interfaces live in `Application/CommandServices` and `Application/QueryServices`; every method is `Handle`**, overloaded on the command or query. The implementations live in `Application/Internal`.
-- **The aggregate root extends `AuditableAggregateRoot`** and gets a database-generated `int Id`, `CreatedAt`, `UpdatedAt` and its domain events from it. References to *other* aggregates are typed records (`CustomerId`), never a navigation property.
+- **The aggregate root extends `AuditableAggregateRoot`** and gets a database-generated `int Id`, `CreatedAt`, `UpdatedAt`, a `Version` that turns the second of two concurrent saves into a 409, and its domain events from it. References to *other* aggregates are typed records (`CustomerId`), never a navigation property.
 - **The aggregate has behavior and private setters.** `order.Place()` checks what must be true and records the event; a service never checks the status first.
 - **Value objects are records that validate in their constructor**, with their limits as constants the mapping reuses. One value maps through a converter, several through a complex property; enums are stored by name.
 - **A broken rule is an exception, an expected outcome is a result.** The domain throws its own `InvalidValueException` (400) or `BusinessRuleViolationException` (409); a command service returns `Result<T>` for not found, conflict, invalid or unauthorized; a query service returns `T?`. Every failure leaves as problem details (RFC 9457).
@@ -159,7 +159,7 @@ Each script writes under the project root — the nearest directory, from the cu
   python3 "$SKILL/scripts/new-context.py" --context Ordering --entity Order
   ```
 
-  Add `--plural People` when the naive plural is wrong. It refuses names that would not compile — a context named like its entity, an entity named `Task` or `Event` — and prints the line for `Program.cs` and the migration command. What it writes is ordinary code — read it, then model the real aggregate; the generated one has a single `Name` property as a placeholder.
+  Add `--plural People` when the naive plural is wrong. It refuses names that would not compile — a context named like its entity, an entity named `Task` or `Event` — and an entity another context already has, whose table and route would collide; it prints the line for `Program.cs` and the migration command. What it writes is ordinary code — read it, then model the real aggregate; the generated one has a single `Name` property as a placeholder.
 
 - **`assets/iam-context/`** — a complete identity context: `User`, roles, sign-up, sign-in, JWT, and the policy that protects every other endpoint:
 

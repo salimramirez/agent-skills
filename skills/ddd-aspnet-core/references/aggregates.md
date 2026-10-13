@@ -49,6 +49,7 @@ public class Order : AuditableAggregateRoot
             throw new InvalidValueException(
                 $"This order is in {_lines[0].UnitPrice.Currency}, not {unitPrice.Currency}.");
         var line = new OrderLine(dishName, quantity, unitPrice);
+        _ = Total.Add(line.Subtotal); // the same for the total: it must still be an amount of money
         _lines.Add(line);
         return line;
     }
@@ -73,6 +74,7 @@ What makes it an aggregate rather than a record:
 - **Every setter is private.** The only way to change the status is a method that knows when it may. `order.Status = OrderStatus.Placed` does not compile.
 - **The collection goes out read-only.** `Lines` is an `IReadOnlyList` over the private `_lines`, so no line gets in without passing `AddLine`.
 - **A derived value is computed, not stored.** `Total` cannot disagree with the lines; EF Core does not map a property with no setter and no backing field, so it never becomes a column.
+- **…and it is valid whenever its inputs are.** A computed property runs on every read, so a value it cannot represent must be refused when it is *written*. Measured before the check above existed: a line of 2,000,000 × 100.00 was saved — the request answered 400 only afterwards, while building the response — and from then on every read of that order, and `GET /orders` itself, answered 400, because computing `Total` threw. `AddLine` computes the new total before it adds the line, and `OrderLine` computes its subtotal in its constructor.
 - **Two exceptions, two meanings.** A value the order cannot accept, whatever its state — a blank address, a currency different from the other lines — is an `InvalidValueException` (400). An operation the order refuses *because of its state* — placing an order that is already placed — is a `BusinessRuleViolationException` (409). See `exceptions.md`.
 - **A method never does nothing silently.** A `Place()` that returns without placing when its condition fails leaves the caller believing it worked; it throws instead.
 - **A transition records an event** after the state changed and only if it did. An order is saved when it is opened, so by the time it can be placed it has its `Id` — see `domain-events.md`.
@@ -96,6 +98,9 @@ public class OrderLine
         if (dishName.Trim().Length > DishNameMaxLength)
             throw new InvalidValueException($"A dish name has at most {DishNameMaxLength} characters.");
         if (quantity < 1) throw new InvalidValueException("The quantity must be at least 1.");
+        // Subtotal is computed on every read; computing it once now keeps a line whose subtotal Money cannot
+        // hold from ever existing, instead of failing every later read of the order.
+        _ = unitPrice.Multiply(quantity);
         DishName = dishName.Trim();
         Quantity = quantity;
         UnitPrice = unitPrice;
@@ -112,11 +117,21 @@ public class OrderLine
 }
 ```
 
-- **It does not extend `AuditableAggregateRoot`** and has no repository: only a root has those. Its row's changes still update the root's `UpdatedAt` — see `shared-kernel.md`.
+- **It does not extend `AuditableAggregateRoot`** and has no repository: only a root has those. Its row's changes still update the root's `UpdatedAt` and `Version` — see `shared-kernel.md`.
 - **It lives in `Domain/Model/Entities`** of the same context, because it has no meaning without its root.
 - **Its state is read-only from outside**, like the root's. `Lines` hands out the line objects themselves; with a public setter on `Quantity`, any code could change a placed order's line. With `private set`, `order.Lines[0].Quantity = 99` does not compile (CS0272, measured). A change to a line is a method of the root, which checks the status first.
 - **Its constructor is `internal`, and that is a statement of intent, not a lock.** It keeps the constructor out of other assemblies; in a single project, another bounded context can still call it — measured, it compiles. That `new OrderLine(...)` appears only inside `Order` is something a reviewer checks.
 - **It is loaded with its root, always.** The mapping makes the lines part of every query for an order — see `persistence.md`. An aggregate loaded without its parts is worse than no aggregate: `Place()` would see no lines and refuse a full order, or a rule that checks "all lines are ready" would pass on an empty list.
+
+## One aggregate, one writer at a time
+
+"One transaction changes one aggregate" is half of the consistency boundary; the other half is that two transactions must not change the *same* aggregate from the same starting point. Without that, `Place()` checks "only a draft can be placed" against a state another request is changing at the same moment — measured: ten simultaneous placements of one draft order all answered 200, and the kitchen was notified ten times.
+
+The kernel closes it with optimistic concurrency. `AuditableAggregateRoot` carries a `Version`, configured as a concurrency token for every root; the interceptor sets it to the version that was read plus one whenever the root or any entity inside it changes; and EF Core makes every update and delete conditional on the version that was read (`… WHERE id = @id AND version = @read`). Of two saves made from the same version, the database applies one; the other fails with `DbUpdateConcurrencyException`, which the exception handler answers with 409 — "Another request changed this resource first. Read it again and retry." Measured with the same race: one 200, nine 409, one notification — the losers' events are dropped with their failed save.
+
+Adding a part races the same way, and on MySQL it loses differently. A save that adds a line inserts into `order_lines`, and the foreign key check locks the order's row for reading; it then updates the order's version, which needs the row for writing. Two such saves each hold the read lock the other must wait for, and MySQL breaks the deadlock by rolling one back — "Deadlock found when trying to get lock; try restarting transaction". That is a lost race too, so the kernel answers it with the same 409 (`IsDeadlock()`, next to the unique-index check). Measured, ten simultaneous lines added to one order: seven 500s before; after, one or two 201s and the rest 409, with exactly the lines that were answered 201 saved. PostgreSQL's foreign key lock does not block an update of the version, and the same race gave 201s and 409s with no deadlock at all.
+
+Nothing in an aggregate or a service handles any of it: it is a property of every root, and a 409 the client already knows how to read.
 
 ## Another aggregate is a reference, never an object
 

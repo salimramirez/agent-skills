@@ -156,4 +156,22 @@ public sealed class Result
     {
         return Failure(new Error(ErrorKind.Conflict, message));
     }
+
+    /// <summary>
+    ///     A failure because the command refers to something it cannot use.
+    /// </summary>
+    /// <param name="message">What it cannot use, and why.</param>
+    public static Result Invalid(string message)
+    {
+        return Failure(new Error(ErrorKind.Invalid, message));
+    }
+
+    /// <summary>
+    ///     A failure because the caller could not be authenticated.
+    /// </summary>
+    /// <param name="message">What failed, without saying which part.</param>
+    public static Result Unauthorized(string message)
+    {
+        return Failure(new Error(ErrorKind.Unauthorized, message));
+    }
 }

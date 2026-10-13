@@ -19,8 +19,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.ConfigureConventions(configurationBuilder);
 
-        // Enums are stored by name: a reordered enum must not change what the rows mean.
-        configurationBuilder.Properties<Enum>().HaveConversion<string>();
+        // Enums are stored by name: a reordered enum must not change what the rows mean. With a length, so a
+        // word of a few letters is a varchar, not the longtext a string without one becomes.
+        configurationBuilder.Properties<Enum>().HaveConversion<string>().HaveMaxLength(50);
 
         // Timestamps to the microsecond: without it MySQL's datetime keeps whole seconds.
         configurationBuilder.Properties<DateTimeOffset>().HavePrecision(6);
@@ -32,7 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         base.OnModelCreating(builder);
 
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
-        builder.IgnoreDomainEvents();
+        builder.ConfigureAggregateRoots();
 
         // Last, so it renames what every configuration above produced.
         builder.UseSnakeCaseNamingConvention();

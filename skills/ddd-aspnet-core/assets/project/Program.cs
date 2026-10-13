@@ -18,7 +18,9 @@ builder.Services.AddControllers(options =>
     options.Conventions.Add(new RouteTokenTransformerConvention(new KebabCaseParameterTransformer()));
     options.OutputFormatters.RemoveType<StringOutputFormatter>();
     options.OutputFormatters.OfType<SystemTextJsonOutputFormatter>().Single().SupportedMediaTypes.Remove("text/json");
-});
+}).AddJsonOptions(options =>
+    // A missing value-type property (a price, a quantity) is a 400, not a silent 0
+    options.JsonSerializerOptions.RespectRequiredConstructorParameters = true);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 
@@ -40,6 +42,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "__Title__ API", Version = "v1" });
     options.IncludeXmlComments(typeof(Program).Assembly);
+    options.CustomSchemaIds(OpenApiSchemaIds.For);
     options.AddSecurityDefinition("bearerAuth", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.Http,

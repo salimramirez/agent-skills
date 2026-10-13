@@ -42,7 +42,7 @@ A comment *inside* a method says why, never what: `// Only after the commit: a h
 
 `<Nullable>enable</Nullable>` is on. A query service returns `Order?` and the controller answers `null` with a 404. The `null!` that silences the compiler appears in one place only: the private parameterless constructor EF Core uses to materialize an entity, before it sets the properties itself.
 
-A request property declared non-nullable is required: a body without it is a 400 before the controller runs — see `rest.md`.
+Every parameter of a request resource is required, nullable or not: a body that leaves one out is a 400 before the controller runs, and so is a non-nullable one sent as `null`. An optional parameter is nullable *and* has a default — `IReadOnlyCollection<string>? Roles = null` — see `rest.md`.
 
 ## Logging
 
@@ -90,7 +90,7 @@ A column narrower than what the domain accepts turns a client's mistake into a 5
 - `SaveChangesAsync` on the `DbContext` instead of `unitOfWork.CompleteAsync`: the domain events are never dispatched.
 
 **Infrastructure**
-- A `HasMaxLength` with a literal, or with no rule in the domain behind it.
+- A `HasMaxLength` on a value clients send, with a literal or with no rule in the domain behind it. A literal is fine for what the application writes itself — a password hash, an enum's name.
 - A repository that returns `IQueryable` or an EF Core type: the domain sees persistence through the port only.
 - A business decision in a configuration or in a repository query.
 

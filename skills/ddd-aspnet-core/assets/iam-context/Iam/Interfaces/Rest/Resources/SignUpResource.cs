@@ -8,7 +8,7 @@ namespace __RootNamespace__.Iam.Interfaces.Rest.Resources;
 /// <param name="Username">The username.</param>
 /// <param name="Password">The password, between 8 characters and 72 bytes.</param>
 /// <param name="Roles">The role names (<c>ROLE_USER</c>, <c>ROLE_ADMIN</c>); none means <c>ROLE_USER</c>.</param>
-public record SignUpResource(string Username, string Password, IReadOnlyCollection<string>? Roles)
+public record SignUpResource(string Username, string Password, IReadOnlyCollection<string>? Roles = null)
 {
     /// <summary>
     ///     Writes the members for <c>ToString()</c>, leaving the password out: a record prints every property,

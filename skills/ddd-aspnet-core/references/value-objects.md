@@ -49,12 +49,13 @@ A column narrower than what the domain accepts turns a client's mistake into a s
 public sealed record Money
 {
     public const decimal MaxAmount = 99_999_999.99m;
+    public const int CurrencyLength = 3;
 
     public Money(decimal amount, string currency)
     {
         if (amount < 0) throw new InvalidValueException("An amount of money cannot be negative.");
         if (amount > MaxAmount) throw new InvalidValueException($"An amount of money cannot exceed {MaxAmount}.");
-        if (currency.Length != 3 || !currency.All(char.IsAsciiLetter))
+        if (currency.Length != CurrencyLength || !currency.All(char.IsAsciiLetter))
             throw new InvalidValueException($"'{currency}' is not a currency code.");
         Amount = decimal.Round(amount, 2);
         Currency = currency.ToUpperInvariant();
@@ -100,7 +101,7 @@ The aggregate's *own* identity stays a database-generated `int` from `AuditableA
 
 ## Enums
 
-An enum is a value object with a closed set of values: `OrderStatus { Draft, Placed, Cancelled }`. No prefix on the name, a `<summary>` on every member, and the shared convention stores it by name (`varchar` with `Placed` in it), so reordering or inserting a member never changes what a stored row means. A resource sends it with `ToString()`.
+An enum is a value object with a closed set of values: `OrderStatus { Draft, Placed, Cancelled }`. No prefix on the name, a `<summary>` on every member, and the shared convention stores it by name (`Placed`, in a `varchar(50)` rather than the `longtext` a string without a length becomes), so reordering or inserting a member never changes what a stored row means. A resource sends it with `ToString()`.
 
 ## How each one is mapped
 

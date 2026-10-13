@@ -59,7 +59,7 @@ public class CustomersController(
 }
 ```
 
-- **Plural, at `api/v1/[controller]`.** The kebab-case convention turns `CustomersController` into `/api/v1/customers` and `MenuItemsController` into `/api/v1/menu-items`, and writes the `Location` of a created resource the same way.
+- **Plural, at `api/v1/[controller]`.** The kebab-case convention turns `CustomersController` into `/api/v1/customers` and `MenuItemsController` into `/api/v1/menu-items`, and writes the `Location` of a created resource the same way. The route comes from the class name alone, so two contexts with a `ProductsController` each share `/api/v1/products`: the application starts, and every request to it is a 500 (`AmbiguousMatchException`, measured). One of them takes a route of its own — `[Route("api/v1/inventory/[controller]")]` — or, better, a name in its own context's language (see `persistence.md`).
 - **A route parameter is named after what it identifies** — `{customerId:int}`, never `{id}` — and constrained to its type, so `/customers/abc` is a 404 and never reaches the action.
 - **Thin.** An action builds a command or a query, calls one service, and answers. It never calls a repository, never checks a rule, never decides a status code from anything but the result.
 - **A command's result goes through `ToActionResult`**, which runs the success lambda or answers the failure with problem details and the status of its kind. A query's `null` is answered by the action itself with `Problem(...)` and 404.
@@ -103,14 +103,18 @@ public static class CustomerResourceFromEntityAssembler
 
 ## What the framework checks before the action runs
 
-With `[ApiController]` and nullable reference types on, a request whose body is missing a non-nullable property is answered with 400 before the action runs:
+`Program.cs` turns on `RespectRequiredConstructorParameters`: a property the body leaves out is a 400 before the action runs, whatever its type. Without it, a missing `unitPrice` reached the domain as `0` and a line was added at no cost — a `decimal` cannot be null, so nothing noticed (measured). With it:
 
 ```json
 {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.",
- "status":400,"errors":{"Email":["The Email field is required."],"LastName":["The LastName field is required."]}}
+ "status":400,"errors":{"$":["JSON deserialization for type 'QuickBite.Platform.Ordering.Interfaces.Rest.Resources.AddOrderLineResource' was missing required properties including: 'unitPrice'."],
+ "resource":["The resource field is required."]}}
 ```
 
-That is all it checks, and it is enough: an empty string *is* present, so `{"firstName": ""}` passes the framework and reaches the domain, where `PersonName` refuses it with a 400 that says why (measured, both). The rules live in one place, the domain; the resource does not repeat them with `[Required]`, `[MaxLength]` or `[EmailAddress]`.
+The message names the missing properties in the JSON's own spelling (`'lastName'; 'email'` when two are missing) — and the resource's full type name, which is the price of the check. A property sent as `null` is caught by nullable reference types instead, under its C# name: `"errors":{"DishName":["The DishName field is required."]}` (measured, both). A client that shows these errors next to its fields matches the key without regard to case.
+
+- **Every parameter of a request resource is required unless it has a default.** An optional one is nullable *and* defaulted — `IReadOnlyCollection<string>? Roles = null` — or leaving it out is a 400.
+- **That is all the framework checks, and it is enough.** An empty string *is* present, so `{"firstName": ""}` passes and reaches the domain, where `PersonName` refuses it with a 400 that says why (measured). The rules live in one place, the domain; the resource does not repeat them with `[Required]`, `[MaxLength]` or `[EmailAddress]`.
 
 ## Status codes
 
@@ -123,7 +127,7 @@ That is all it checks, and it is enough: an empty string *is* present, so `{"fir
 | `401 Unauthorized` | no valid bearer token (with the IAM context) |
 | `403 Forbidden` | a valid token without the role the endpoint requires |
 | `404 Not Found` | the resource in the URL does not exist |
-| `409 Conflict` | a rule of the aggregate's state; a value that must be unique and is not |
+| `409 Conflict` | a rule of the aggregate's state; a value that must be unique and is not; a change another request saved first |
 | `500` | a bug — logged, answered without details |
 
 Every 4xx and 5xx body is problem details (RFC 9457) — see `exceptions.md`. A list that is empty is a 200 with `[]`, never a 404.
@@ -136,6 +140,6 @@ Swagger UI is built from the XML comments and the attributes, with nothing else 
 - each `<response code>` is the description of that status;
 - each `[ProducesResponseType<T>(…)]` declares the status and the schema of its body. A 4xx declared without a type is documented as `ProblemDetails`.
 
-Declare every status an action can answer, with both: the attribute for the schema, the comment for the sentence. The JSON is camelCase (`firstName`); `decimal` amounts are numbers, exact on the way in and on the way out.
+Declare every status an action can answer, with both: the attribute for the schema, the comment for the sentence. The JSON is camelCase (`firstName`); `decimal` amounts are numbers, exact on the way in and on the way out. Schemas are named after their context — `Ordering.OrderResource`, `Iam.UserResource` — by `OpenApiSchemaIds` (see `shared-kernel.md`), so two contexts can each have a `MoneyResource`.
 
 CORS, the bearer token in Swagger UI and the switch to Scalar are in `project-setup.md`.

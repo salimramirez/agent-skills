@@ -41,13 +41,28 @@ public class OrderLineConfiguration : IEntityTypeConfiguration<OrderLine>
         builder.ComplexProperty(line => line.UnitPrice, price =>
         {
             price.Property(p => p.Amount).HasPrecision(10, 2); // holds Money.MaxAmount
-            price.Property(p => p.Currency).HasMaxLength(3);
+            price.Property(p => p.Currency).HasMaxLength(Money.CurrencyLength);
         });
     }
 }
 ```
 
-No table names, no column names: the shared convention writes `orders`, `order_lines`, `customer_id`, `unit_price_amount`. The mapping says only what the convention cannot know — keys, lengths, conversions, relationships.
+No table names, no column names: the shared convention writes `orders`, `order_lines`, `customer_id`, `unit_price_amount`. The mapping says only what the convention cannot know — keys, lengths, conversions, relationships. An enum such as `Status` is stored by name in a `varchar(50)` without a word in the mapping; `HasMaxLength(20)` narrows it where the longest name is known to be short.
+
+## Two contexts, one word
+
+The table is named after the class, without its namespace. A `Product` in `Catalog` and another in `Inventory` both want `products`, and the model refuses to build — `dotnet ef migrations add` stops with *The table 'products' cannot be used for entity type 'Product' since it is being used for entity type 'Product' and potentially other entity types, but there is no linking relationship* (measured). Their controllers collide too — see `rest.md`.
+
+Two contexts rarely mean the same thing by one word, and the collision is usually the hint: `Inventory` keeps a `StockItem`, not a `Product`. When the word really is right in both, the second one names its table and its route:
+
+```csharp
+builder.ToTable("InventoryProducts");        // the convention writes inventory_products
+```
+```csharp
+[Route("api/v1/inventory/[controller]")]     // /api/v1/inventory/products
+```
+
+Measured: both tables created, both `POST`s answered 201, each list showed only its own rows. `new-context.py` refuses a name another context already uses for an aggregate, an entity or a controller, and says this.
 
 ## Loading an aggregate whole
 
@@ -116,9 +131,11 @@ Measured with `MySql.EntityFrameworkCore` 10.0.9 against MySQL 8.0. Each one eit
   The comparer gives the change tracker a way to compare two lists by content; without one, EF Core compares the list by reference and a role added to the same list goes unnoticed.
 - **`DateTimeOffset` is written to the microsecond and read back to the second.** The shared convention gives the columns `datetime(6)`, and the rows hold `01:44:55.588536`; reading them through the provider returned `01:44:55`, offset `+00:00`. Audit timestamps survive that; anything that needs the fraction back from MySQL stores a `DateTime` in UTC instead (which round-trips the fraction, with `Kind` unspecified). On PostgreSQL the column is `timestamp with time zone`.
 
-## Audit timestamps follow the aggregate
+## Timestamps and version follow the aggregate
 
-`CreatedAt` and `UpdatedAt` are set by the kernel's interceptor, never by the domain. A save that only adds, changes or removes an `OrderLine` leaves the `Order` unchanged as far as EF Core knows; the interceptor follows the line's foreign key to its root and updates the root's `UpdatedAt` (measured: without that, adding a line two seconds later left the order's timestamp where it was). A change to any part of the aggregate is a change to the aggregate.
+`CreatedAt`, `UpdatedAt` and `Version` are set by the kernel's interceptor, never by the domain. A save that only adds, changes or removes an `OrderLine` leaves the `Order` unchanged as far as EF Core knows; the interceptor follows the line's foreign key to its root and updates the root's `UpdatedAt` and `Version` (measured: without that, adding a line two seconds later left the order's timestamp where it was). A change to any part of the aggregate is a change to the aggregate.
+
+`Version` is a concurrency token on every root (`ConfigureAggregateRoots`, in the kernel), so EF Core writes the update as `UPDATE orders SET … version = @new WHERE id = @id AND version = @read`. A save that finds the row already moved on changes nothing and throws `DbUpdateConcurrencyException`, which the kernel answers with 409, as it answers a MySQL deadlock between two saves that add parts to one aggregate — see `aggregates.md`. Nothing in a bounded context's mapping mentions it; the migration that adds a context adds the `version` column with the rest.
 
 ## Migrations
 

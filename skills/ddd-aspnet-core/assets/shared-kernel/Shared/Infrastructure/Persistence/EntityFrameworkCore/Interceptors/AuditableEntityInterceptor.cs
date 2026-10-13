@@ -5,8 +5,8 @@ using __RootNamespace__.Shared.Domain.Model.Aggregates;
 namespace __RootNamespace__.Shared.Infrastructure.Persistence.EntityFrameworkCore.Interceptors;
 
 /// <summary>
-///     Sets the audit timestamps of every aggregate being saved: <c>CreatedAt</c> once, on insert;
-///     <c>UpdatedAt</c> whenever the root or any entity inside it is inserted, updated or deleted.
+///     Stamps every aggregate being saved: <c>CreatedAt</c> once, on insert; <c>UpdatedAt</c> and a new
+///     <c>Version</c> whenever the root or any entity inside it is inserted, updated or deleted.
 /// </summary>
 /// <remarks>
 ///     It writes through the change tracker, so the timestamps keep private setters and no code in the
@@ -42,6 +42,10 @@ public sealed class AuditableEntityInterceptor : SaveChangesInterceptor
             if (entry.State == EntityState.Deleted) continue;
             if (entry.State == EntityState.Added) entry.Property(root => root.CreatedAt).CurrentValue = now;
             entry.Property(root => root.UpdatedAt).CurrentValue = now;
+            // The update is made conditional on the version that was read; the database applies one of two
+            // concurrent saves, and the other fails instead of overwriting it.
+            var version = entry.Property(root => root.Version);
+            version.CurrentValue = version.OriginalValue + 1;
         }
     }
 

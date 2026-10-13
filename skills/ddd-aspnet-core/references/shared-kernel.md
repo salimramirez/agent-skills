@@ -22,7 +22,7 @@ Shared/
 │   │   └── Extensions/                      DbUpdateExceptionExtensions
 │   ├── Events/                              DomainEventDispatcher
 │   ├── Pipeline/ExceptionHandlers/          DomainExceptionHandler
-│   └── Interfaces/AspNetCore/Configuration/ KebabCaseParameterTransformer
+│   └── Interfaces/AspNetCore/Configuration/ KebabCaseParameterTransformer, OpenApiSchemaIds
 └── Interfaces/Rest/Transform/   ActionResultAssembler, ErrorKindExtensions
 ```
 
@@ -36,6 +36,7 @@ public abstract class AuditableAggregateRoot
     private readonly List<IEvent> _domainEvents = [];
 
     public int Id { get; private set; }
+    public int Version { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public IReadOnlyCollection<IEvent> DomainEvents => _domainEvents.AsReadOnly();
@@ -45,7 +46,7 @@ public abstract class AuditableAggregateRoot
 }
 ```
 
-Every setter is private: the database assigns `Id`, the interceptor sets the timestamps through the change tracker, and only the aggregate itself records events. An entity *inside* an aggregate does not extend it — see `aggregates.md`.
+Every setter is private: the database assigns `Id`, the interceptor sets the timestamps and the `Version` through the change tracker, and only the aggregate itself records events. `Version` is the aggregate's optimistic concurrency token — see `aggregates.md`. An entity *inside* an aggregate does not extend it — see `aggregates.md`.
 
 **`IEvent`** — the marker of a domain event. A plain interface, so the domain depends on no messaging library.
 
@@ -72,27 +73,29 @@ Every setter is private: the database assigns `Id`, the interceptor sets the tim
 
 ## Infrastructure
 
-**`AppDbContext`** — the one database context. It picks up every `IEntityTypeConfiguration<T>` in the assembly, so a new bounded context never edits it, and it applies three conventions to the whole model:
+**`AppDbContext`** — the one database context. It picks up every `IEntityTypeConfiguration<T>` in the assembly, so a new bounded context never edits it; it configures every aggregate root (`ConfigureAggregateRoots`: the domain events stay out of the model, `Version` is a concurrency token); and it applies three conventions to the whole model:
 
-- enums are stored by name, so reordering an enum does not change what the rows mean;
+- enums are stored by name, in a `varchar(50)` — reordering an enum does not change what the rows mean, and a word of a few letters does not take the `longtext` that a string without a length becomes on MySQL (measured);
 - `DateTimeOffset` columns keep microseconds (`datetime(6)` on MySQL);
 - tables are plural snake_case, and columns, keys, foreign keys and indexes snake_case — `order_lines`, `unit_price_amount`, `pk_orders`, `ix_customers_email` — by `UseSnakeCaseNamingConvention()`, applied last so it renames what every configuration produced.
 
-The naming convention reads each column's name *as it is in its table*. A complex property's columns carry the property's name as a prefix there (`UnitPrice_Amount`); read without the table, the name is just `Amount`, and two values of the same type in one entity end up on the same column — measured, and the reason the convention passes a `StoreObjectIdentifier`.
+The naming convention works in two passes — every table and column first, then keys, foreign keys and indexes — because a foreign key's name is made from both of its tables: in one pass, a dependent table processed before its principal got `fk_areas_zone_zone_id` instead of `fk_areas_zones_zone_id` (measured). And it reads each column's name *as it is in its table*. A complex property's columns carry the property's name as a prefix there (`UnitPrice_Amount`); read without the table, the name is just `Amount`, and two values of the same type in one entity end up on the same column — measured, and the reason the convention passes a `StoreObjectIdentifier`.
 
-**`AuditableEntityInterceptor`** — sets `CreatedAt` on insert and `UpdatedAt` on every save of an aggregate, **including a save in which only an entity inside it changed**. Adding a line to an order inserts a row in `order_lines` and leaves the `Order` itself unchanged as far as EF Core knows; the interceptor follows the line's foreign key to its root and updates the root's `UpdatedAt` too (measured: without it, the order's timestamp did not move).
+**`AuditableEntityInterceptor`** — sets `CreatedAt` on insert, and `UpdatedAt` and the next `Version` on every save of an aggregate, **including a save in which only an entity inside it changed**. Adding a line to an order inserts a row in `order_lines` and leaves the `Order` itself unchanged as far as EF Core knows; the interceptor follows the line's foreign key to its root and updates the root's `UpdatedAt` and `Version` too (measured: without it, the order's timestamp did not move). The version moves with it, so two requests adding lines to one order at once conflict like any other two changes to it.
 
 **`BaseRepository<T>`** — the four operations of `IBaseRepository<T>`, plus a protected `Context` for the queries of the concrete repository. `FindByIdAsync` and `ListAsync` are `virtual`, so a repository that needs a different query to load its aggregate overrides them.
 
 **`UnitOfWork`** — takes the events of every changed aggregate, clears them, commits, and only then dispatches them. See `domain-events.md`.
 
-**`DbUpdateExceptionExtensions.IsUniqueConstraintViolation()`** — the one line in the kernel that knows the database: MySQL's error 1062. Switching databases changes this line — see `project-setup.md`.
+**`DbUpdateExceptionExtensions`** — the two lines in the kernel that know the database: `IsUniqueConstraintViolation()` is MySQL's error 1062, `IsDeadlock()` its error 1213. Switching databases changes these two lines — see `project-setup.md`.
 
 **`DomainEventDispatcher`** — delivers each event to every registered `IEventHandler<T>` for its type, one after another, logging and skipping a handler that throws.
 
-**`DomainExceptionHandler`** — an `IExceptionHandler` that answers `InvalidValueException`, `BusinessRuleViolationException` and a unique-index conflict with problem details, and leaves everything else to the default 500. See `exceptions.md`.
+**`DomainExceptionHandler`** — an `IExceptionHandler` that answers `InvalidValueException`, `BusinessRuleViolationException`, a save that lost a race (`DbUpdateConcurrencyException`, or a deadlock the database broke) and a unique-index conflict with problem details, and leaves everything else to the default 500. See `exceptions.md`.
 
 **`KebabCaseParameterTransformer`** — writes the `[controller]` route token in kebab-case.
+
+**`OpenApiSchemaIds.For`** — names the schemas of the API description after their context: `Ordering.OrderResource`, `Iam.UserResource`. Two contexts may each have a `MoneyResource`; with plain type names, Swashbuckle refuses to build the document (`Can't use schemaId "$MoneyResource"…`, a 500 on `swagger.json`), and `Microsoft.AspNetCore.OpenApi` silently documents both with the first one's schema (measured, both).
 
 ## Interfaces
 

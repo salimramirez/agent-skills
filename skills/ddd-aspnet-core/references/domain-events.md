@@ -53,7 +53,7 @@ public async Task CompleteAsync(CancellationToken cancellationToken = default)
 }
 ```
 
-- **After the commit, never before.** If the save fails, the events are dropped with it, and no handler notifies a kitchen about an order that was never placed.
+- **After the commit, never before.** If the save fails, the events are dropped with it, and no handler notifies a kitchen about an order that was never placed. That includes a save that lost a race: ten requests placing one order at once got one 200 and nine 409s, and the kitchen was notified once (measured; see `aggregates.md`).
 - **The consequence is the other half of the trade:** a handler runs after the change is durable, and what it saves goes in a transaction of its own. If it fails, the change it reacted to stays. That is the right default for reactions — notifying the kitchen, updating a read model, sending an email — and the wrong tool for an invariant. A rule that must hold *atomically* with the change belongs inside the aggregate.
 - **Every service commits through `IUnitOfWork`.** A `context.SaveChangesAsync()` called directly saves the change and never dispatches its events.
 
